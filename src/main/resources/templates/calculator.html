@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор</title>
+</head>
+<body>
+<h1>Калькулятор</h1>
+<form action="/calculate" method="post">
+    <input type="number" name="num1" placeholder="Число 1" required>
+    <select name="operation">
+        <option value="add">+</option>
+        <option value="subtract">-</option>
+        <option value="multiply">*</option>
+        <option value="divide">/</option>
+    </select>
+    <input type="number" name="num2" placeholder="Число 2" required>
+    <button type="submit">Вычислить</button>
+    <div th:if="${error != null}">
+        <p style="color:red;">[[${error}]]</p>
+    </div>
+</form>
+</body>
+</html>
