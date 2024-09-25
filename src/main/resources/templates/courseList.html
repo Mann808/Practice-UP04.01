@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Список курсов</title>
+</head>
+<body>
+<h1>Список курсов</h1>
+
+<form action="/courses/add" method="post">
+    <input type="text" name="courseName" placeholder="Название курса" required>
+    <input type="text" name="courseDescription" placeholder="Описание курса" required>
+    <button type="submit">Добавить курс</button>
+</form>
+
+<h2>Все курсы:</h2>
+<ul>
+    <th:block th:each="course : ${courses}">
+        <li>
+            <span th:text="${course.courseName} + ' - ' + ${course.courseDescription}"></span>
+            <form action="/courses/update" method="post" style="display:inline;">
+                <input type="hidden" name="id" th:value="${course.id}"/>
+                <input type="text" name="courseName" placeholder="Название курса" required/>
+                <input type="text" name="courseDescription" placeholder="Описание курса" required/>
+                <button type="submit">Обновить</button>
+            </form>
+            <form action="/courses/delete" method="post" style="display:inline;">
+                <input type="hidden" name="id" th:value="${course.id}"/>
+                <button type="submit">Удалить</button>
+            </form>
+        </li>
+    </th:block>
+</ul>
+</body>
+</html>
