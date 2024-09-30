@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Список курсов</title>
+</head>
+<body>
+<h1>Список курсов</h1>
+
+<a href="/courses/add">Добавить новый курс</a>
+
+<form th:action="@{/courses/search}" method="get">
+    <input type="text" name="courseName" placeholder="Поиск по названию курса">
+    <button type="submit">Поиск</button>
+</form>
+
+<form th:action="@{/courses/filter}" method="get">
+    <input type="text" name="courseName" placeholder="Название курса">
+    <input type="text" name="courseDescription" placeholder="Описание курса">
+    <button type="submit">Фильтр</button>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Название курса</th>
+        <th>Описание курса</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="course : ${courses}">
+        <td th:text="${course.id}"></td>
+        <td th:text="${course.courseName}"></td>
+        <td th:text="${course.courseDescription}"></td>
+        <td>
+            <a th:href="@{/courses/edit/{id}(id=${course.id})}">Редактировать</a>
+            <form th:action="@{/courses/delete}" method="post" style="display: inline;">
+                <input type="hidden" name="id" th:value="${course.id}" />
+                <button type="submit">Удалить</button>
+            </form>
+            <form th:action="@{/courses/deletePhysical}" method="post" style="display: inline;">
+                <input type="hidden" name="id" th:value="${course.id}" />
+                <button type="submit">Удалить физически</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<div>
+    <span th:if="${currentPage > 1}">
+        <a th:href="@{/courses(page=${currentPage - 1}, size=${pageSize})}">Предыдущая</a>
+    </span>
+    <span th:if="${courses.size() == pageSize}">
+        <a th:href="@{/courses(page=${currentPage + 1}, size=${pageSize})}">Следующая</a>
+    </span>
+</div>
+</body>
+</html>

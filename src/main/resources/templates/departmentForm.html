@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${department.id == 0 ? 'Добавление кафедры' : 'Редактирование кафедры'}"></title>
+</head>
+<body>
+<h1 th:text="${department.id == 0 ? 'Добавление кафедры' : 'Редактирование кафедры'}"></h1>
+
+<form th:action="${department.id == 0 ? '/departments/add' : '/departments/update'}" th:object="${department}" method="post">
+    <input type="hidden" th:field="*{id}" />
+
+    <label for="name">Название кафедры:</label>
+    <input type="text" id="name" th:field="*{name}" />
+    <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+
+    <label for="faculty">Факультет:</label>
+    <select id="faculty" th:field="*{faculty}">
+        <option th:each="fac : ${faculties}" th:value="${fac.id}" th:text="${fac.name}"></option>
+    </select>
+
+    <button type="submit" th:text="${department.id == 0 ? 'Добавить кафедру' : 'Обновить кафедру'}"></button>
+</form>
+
+<a href="/departments">Вернуться к списку кафедр</a>
+</body>
+</html>

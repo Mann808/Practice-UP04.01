@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${course.id == 0 ? 'Добавление курса' : 'Редактирование курса'}"></title>
+</head>
+<body>
+<h1 th:text="${course.id == 0 ? 'Добавление курса' : 'Редактирование курса'}"></h1>
+
+<form th:action="${course.id == 0 ? '/courses/add' : '/courses/update'}" th:object="${course}" method="post">
+    <input type="hidden" th:field="*{id}" />
+
+    <label for="courseName">Название курса:</label>
+    <input type="text" id="courseName" th:field="*{courseName}" />
+    <span th:if="${#fields.hasErrors('courseName')}" th:errors="*{courseName}"></span>
+
+    <label for="courseDescription">Описание курса:</label>
+    <textarea id="courseDescription" th:field="*{courseDescription}"></textarea>
+    <span th:if="${#fields.hasErrors('courseDescription')}" th:errors="*{courseDescription}"></span>
+
+    <label for="faculty">Факультет:</label>
+    <select id="faculty" th:field="*{faculty}">
+        <option th:each="fac : ${faculties}" th:value="${fac.id}" th:text="${fac.name}"></option>
+    </select>
+
+    <label for="teachers">Преподаватели:</label>
+    <select multiple id="teachers" th:field="*{teachers}">
+        <option th:each="teacher : ${teachers}" th:value="${teacher.id}" th:text="${teacher.name}"></option>
+    </select>
+
+    <button type="submit" th:text="${course.id == 0 ? 'Добавить курс' : 'Обновить курс'}"></button>
+</form>
+
+<a href="/courses">Вернуться к списку курсов</a>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${student.id == 0 ? 'Добавление студента' : 'Редактирование студента'}"></title>
+</head>
+<body>
+<h1 th:text="${student.id == 0 ? 'Добавление студента' : 'Редактирование студента'}"></h1>
+
+<form th:action="${student.id == 0 ? '/students/add' : '/students/update'}" th:object="${student}" method="post">
+    <input type="hidden" th:field="*{id}" />
+
+    <label for="name">Имя:</label>
+    <input type="text" id="name" th:field="*{name}" />
+    <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+
+    <label for="lastName">Фамилия:</label>
+    <input type="text" id="lastName" th:field="*{lastName}" />
+    <span th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></span>
+
+    <label for="firstName">Отчество:</label>
+    <input type="text" id="firstName" th:field="*{firstName}" />
+    <span th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></span>
+
+    <label for="middleName">Дополнительное имя:</label>
+    <input type="text" id="middleName" th:field="*{middleName}" />
+    <span th:if="${#fields.hasErrors('middleName')}" th:errors="*{middleName}"></span>
+
+    <!-- Выпадающий список для выбора курсов -->
+    <label for="courses">Курсы:</label>
+    <select multiple="multiple" id="courses" th:field="*{courses}">
+        <option th:each="course : ${courses}" th:value="${course.id}" th:text="${course.courseName}"></option>
+    </select>
+
+    <button type="submit" th:text="${student.id == 0 ? 'Добавить студента' : 'Обновить студента'}"></button>
+</form>
+
+<a href="/students">Вернуться к списку студентов</a>
+</body>
+</html>
