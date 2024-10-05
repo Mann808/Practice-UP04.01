@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Список факультетов</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Список факультетов</h1>
+
+<a href="/faculties/add">Добавить новый факультет</a>
+
+<form th:action="@{/faculties/search}" method="get">
+    <input type="text" name="name" placeholder="Поиск по названию факультета">
+    <button type="submit">Поиск</button>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Название факультета</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="faculty : ${faculties}">
+        <td th:text="${faculty.id}"></td>
+        <td th:text="${faculty.name}"></td>
+        <td>
+            <a th:href="@{/faculties/edit/{id}(id=${faculty.id})}">Редактировать</a>
+            <form th:action="@{/faculties/delete}" method="post" style="display:inline;">
+                <input type="hidden" name="id" th:value="${faculty.id}" />
+                <button type="submit">Удалить</button>
+            </form>
+            <form th:action="@{/faculties/deletePhysical}" method="post" style="display:inline;">
+                <input type="hidden" name="id" th:value="${faculty.id}" />
+                <button type="submit">Удалить физически</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<div>
+    <span th:if="${currentPage > 1}">
+        <a th:href="@{/faculties(page=${currentPage - 1}, size=${pageSize})}">Предыдущая</a>
+    </span>
+    <span th:if="${faculties.size() == pageSize}">
+        <a th:href="@{/faculties(page=${currentPage + 1}, size=${pageSize})}">Следующая</a>
+    </span>
+</div>
+</body>
+</html>

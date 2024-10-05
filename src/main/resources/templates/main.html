@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Главная страница</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Добро пожаловать!</h1>
+<p>Вы успешно вошли в систему.</p>
+
+<div>
+    <a th:href="@{/admin}">Административная панель</a>
+</div>
+
+<form th:action="@{/logout}" method="post">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <button type="submit">Выйти</button>
+</form>
+
+</body>
+</html>
