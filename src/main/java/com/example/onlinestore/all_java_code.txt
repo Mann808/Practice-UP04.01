@@ -1,0 +1,3690 @@
+----- .\OnlineStoreApplication.java -----
+package com.example.onlinestore;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class OnlineStoreApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OnlineStoreApplication.class, args);
+    }
+}
+
+
+----- .\config\DataInitializer.java -----
+package com.example.onlinestore.config;
+
+import com.example.onlinestore.entity.Role;
+import com.example.onlinestore.repository.RoleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
+
+@Component
+public class DataInitializer {
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @PostConstruct
+    public void init(){
+        if(!roleRepository.existsById("ROLE_USER")){
+            roleRepository.save(new Role("ROLE_USER"));
+        }
+        if(!roleRepository.existsById("ROLE_MANAGER")){
+            roleRepository.save(new Role("ROLE_MANAGER"));
+        }
+        if(!roleRepository.existsById("ROLE_ADMIN")){
+            roleRepository.save(new Role("ROLE_ADMIN"));
+        }
+    }
+}
+
+
+----- .\config\SecurityConfig.java -----
+package com.example.onlinestore.config;
+
+import com.example.onlinestore.service.CustomUserDetailsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.*;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.userdetails.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/register", "/login").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/manager/**").hasAnyRole("MANAGER", "ADMIN")
+                        .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .defaultSuccessUrl("/", true)
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .permitAll()
+                );
+
+        return http.build();
+    }
+
+    // Исправлено: Получение AuthenticationManager через AuthenticationConfiguration
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+
+
+----- .\config\SwaggerConfig.java -----
+package com.example.onlinestore.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class SwaggerConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI(){
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Online Store API")
+                        .version("1.0")
+                        .description("API documentation for Online Store with Orders and Shipments"));
+    }
+}
+
+
+----- .\controller\AddressController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Address;
+import com.example.onlinestore.service.AddressService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/addresses")
+public class AddressController {
+
+    private final AddressService addressService;
+
+    @Autowired
+    public AddressController(AddressService addressService){
+        this.addressService = addressService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Address> createAddress(@Valid @RequestBody Address address){
+        Address createdAddress = addressService.createAddress(address);
+        return ResponseEntity.ok(createdAddress);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Address>> getAllAddresses(){
+        List<Address> addresses = addressService.getAllAddresses();
+        return ResponseEntity.ok(addresses);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Address> getAddressById(@PathVariable Long id){
+        Optional<Address> address = addressService.getAddressById(id);
+        return address.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Address> updateAddress(@PathVariable Long id, @Valid @RequestBody Address addressDetails){
+        try{
+            Address updatedAddress = addressService.updateAddress(id, addressDetails);
+            return ResponseEntity.ok(updatedAddress);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAddress(@PathVariable Long id){
+        try{
+            addressService.deleteAddress(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\AuthController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Role;
+import com.example.onlinestore.entity.User;
+import com.example.onlinestore.service.RoleService;
+import com.example.onlinestore.service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
+
+@Controller
+public class AuthController {
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private RoleService roleService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    // Показать форму регистрации
+    @GetMapping("/register")
+    public String showRegistrationForm(Model model){
+        model.addAttribute("user", new User());
+        model.addAttribute("roles", roleService.getAllRoles());
+        return "auth/register";
+    }
+
+    // Обработать регистрацию
+    @PostMapping("/register")
+    public String registerUser(@Valid @ModelAttribute("user") User user,
+                               BindingResult result,
+                               @RequestParam("role") String roleName,
+                               Model model){
+        if(result.hasErrors()){
+            model.addAttribute("roles", roleService.getAllRoles());
+            return "auth/register";
+        }
+
+        if(userService.existsByEmail(user.getEmail())){
+            result.rejectValue("email", null, "Пользователь с таким email уже существует");
+            model.addAttribute("roles", roleService.getAllRoles());
+            return "auth/register";
+        }
+
+        // Установка роли
+        Role role = roleService.getRoleByName(roleName);
+        user.setRoles(Set.of(role));
+
+        // Шифрование пароля
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        // Сохранение пользователя
+        userService.saveUser(user);
+
+        return "redirect:/login?registerSuccess";
+    }
+
+    // Показать форму входа
+    @GetMapping("/login")
+    public String showLoginForm(){
+        return "auth/login";
+    }
+}
+
+
+----- .\controller\CategoryController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Category;
+import com.example.onlinestore.service.CategoryService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/categories")
+public class CategoryController {
+
+    private final CategoryService categoryService;
+
+    @Autowired
+    public CategoryController(CategoryService categoryService){
+        this.categoryService = categoryService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Category> createCategory(@Valid @RequestBody Category category){
+        Category createdCategory = categoryService.createCategory(category);
+        return ResponseEntity.ok(createdCategory);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Category>> getAllCategories(){
+        List<Category> categories = categoryService.getAllCategories();
+        return ResponseEntity.ok(categories);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Category> getCategoryById(@PathVariable Long id){
+        Optional<Category> category = categoryService.getCategoryById(id);
+        return category.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Category> updateCategory(@PathVariable Long id, @Valid @RequestBody Category categoryDetails){
+        try{
+            Category updatedCategory = categoryService.updateCategory(id, categoryDetails);
+            return ResponseEntity.ok(updatedCategory);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id){
+        try{
+            categoryService.deleteCategory(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\HomeController.java -----
+package com.example.onlinestore.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class HomeController {
+
+    @GetMapping("/")
+    public String home(){
+        return "home"; // Создайте соответствующий шаблон home.html
+    }
+}
+
+
+----- .\controller\OrderController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Order;
+import com.example.onlinestore.entity.User;
+import com.example.onlinestore.service.OrderService;
+import com.example.onlinestore.service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/orders")
+public class OrderController {
+
+    private final OrderService orderService;
+    private final UserService userService;
+
+    @Autowired
+    public OrderController(OrderService orderService, UserService userService){
+        this.orderService = orderService;
+        this.userService = userService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Order> createOrder(@Valid @RequestBody Order order){
+        if(order.getUser() == null || order.getUser().getId() == null){
+            return ResponseEntity.badRequest().build();
+        }
+        Optional<User> user = userService.getUserById(order.getUser().getId());
+        if(user.isEmpty()){
+            return ResponseEntity.badRequest().build();
+        }
+        order.setUser(user.get());
+        Order createdOrder = orderService.createOrder(order);
+        return ResponseEntity.ok(createdOrder);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Order>> getAllOrders(){
+        List<Order> orders = orderService.getAllOrders();
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Order> getOrderById(@PathVariable Long id){
+        Optional<Order> order = orderService.getOrderById(id);
+        return order.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @Valid @RequestBody Order orderDetails){
+        try{
+            Order updatedOrder = orderService.updateOrder(id, orderDetails);
+            return ResponseEntity.ok(updatedOrder);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id){
+        try{
+            orderService.deleteOrder(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\OrderItemController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.OrderItem;
+import com.example.onlinestore.service.OrderItemService;
+import com.example.onlinestore.service.OrderService;
+import com.example.onlinestore.service.ProductService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/order-items")
+public class OrderItemController {
+
+    private final OrderItemService orderItemService;
+    private final OrderService orderService;
+    private final ProductService productService;
+
+    @Autowired
+    public OrderItemController(OrderItemService orderItemService, OrderService orderService, ProductService productService){
+        this.orderItemService = orderItemService;
+        this.orderService = orderService;
+        this.productService = productService;
+    }
+
+    @PostMapping
+    public ResponseEntity<OrderItem> createOrderItem(@Valid @RequestBody OrderItem orderItem){
+        if(orderItem.getOrder() == null || orderItem.getOrder().getId() == null ||
+                orderItem.getProduct() == null || orderItem.getProduct().getId() == null){
+            return ResponseEntity.badRequest().build();
+        }
+        Optional<com.example.onlinestore.entity.Order> order = orderService.getOrderById(orderItem.getOrder().getId());
+        Optional<com.example.onlinestore.entity.Product> product = productService.getProductById(orderItem.getProduct().getId());
+        if(order.isEmpty() || product.isEmpty()){
+            return ResponseEntity.badRequest().build();
+        }
+        orderItem.setOrder(order.get());
+        orderItem.setProduct(product.get());
+        OrderItem createdOrderItem = orderItemService.createOrderItem(orderItem);
+        return ResponseEntity.ok(createdOrderItem);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<OrderItem>> getAllOrderItems(){
+        List<OrderItem> orderItems = orderItemService.getAllOrderItems();
+        return ResponseEntity.ok(orderItems);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<OrderItem> getOrderItemById(@PathVariable Long id){
+        Optional<OrderItem> orderItem = orderItemService.getOrderItemById(id);
+        return orderItem.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<OrderItem> updateOrderItem(@PathVariable Long id, @Valid @RequestBody OrderItem orderItemDetails){
+        try{
+            OrderItem updatedOrderItem = orderItemService.updateOrderItem(id, orderItemDetails);
+            return ResponseEntity.ok(updatedOrderItem);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOrderItem(@PathVariable Long id){
+        try{
+            orderItemService.deleteOrderItem(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\PaymentController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Payment;
+import com.example.onlinestore.service.PaymentService;
+import com.example.onlinestore.service.OrderService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/payments")
+public class PaymentController {
+
+    private final PaymentService paymentService;
+    private final OrderService orderService;
+
+    @Autowired
+    public PaymentController(PaymentService paymentService, OrderService orderService){
+        this.paymentService = paymentService;
+        this.orderService = orderService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Payment> createPayment(@Valid @RequestBody Payment payment){
+        if(payment.getOrder() == null || payment.getOrder().getId() == null){
+            return ResponseEntity.badRequest().build();
+        }
+        Optional<com.example.onlinestore.entity.Order> order = orderService.getOrderById(payment.getOrder().getId());
+        if(order.isEmpty()){
+            return ResponseEntity.badRequest().build();
+        }
+        payment.setOrder(order.get());
+        Payment createdPayment = paymentService.createPayment(payment);
+        return ResponseEntity.ok(createdPayment);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Payment>> getAllPayments(){
+        List<Payment> payments = paymentService.getAllPayments();
+        return ResponseEntity.ok(payments);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Payment> getPaymentById(@PathVariable Long id){
+        Optional<Payment> payment = paymentService.getPaymentById(id);
+        return payment.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Payment> updatePayment(@PathVariable Long id, @Valid @RequestBody Payment paymentDetails){
+        try{
+            Payment updatedPayment = paymentService.updatePayment(id, paymentDetails);
+            return ResponseEntity.ok(updatedPayment);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePayment(@PathVariable Long id){
+        try{
+            paymentService.deletePayment(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\ProductController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Product;
+import com.example.onlinestore.service.ProductService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/products")
+public class ProductController {
+
+    private final ProductService productService;
+
+    @Autowired
+    public ProductController(ProductService productService){
+        this.productService = productService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody Product product){
+        Product createdProduct = productService.createProduct(product);
+        return ResponseEntity.ok(createdProduct);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Product>> getAllProducts(){
+        List<Product> products = productService.getAllProducts();
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> getProductById(@PathVariable Long id){
+        Optional<Product> product = productService.getProductById(id);
+        return product.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @Valid @RequestBody Product productDetails){
+        try{
+            Product updatedProduct = productService.updateProduct(id, productDetails);
+            return ResponseEntity.ok(updatedProduct);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id){
+        try{
+            productService.deleteProduct(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\ShipmentController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Shipment;
+import com.example.onlinestore.service.ShipmentService;
+import com.example.onlinestore.service.OrderService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/shipments")
+public class ShipmentController {
+
+    private final ShipmentService shipmentService;
+    private final OrderService orderService;
+
+    @Autowired
+    public ShipmentController(ShipmentService shipmentService, OrderService orderService){
+        this.shipmentService = shipmentService;
+        this.orderService = orderService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Shipment> createShipment(@Valid @RequestBody Shipment shipment){
+        if(shipment.getOrder() == null || shipment.getOrder().getId() == null){
+            return ResponseEntity.badRequest().build();
+        }
+        Optional<com.example.onlinestore.entity.Order> order = orderService.getOrderById(shipment.getOrder().getId());
+        if(order.isEmpty()){
+            return ResponseEntity.badRequest().build();
+        }
+        shipment.setOrder(order.get());
+        Shipment createdShipment = shipmentService.createShipment(shipment);
+        return ResponseEntity.ok(createdShipment);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Shipment>> getAllShipments(){
+        List<Shipment> shipments = shipmentService.getAllShipments();
+        return ResponseEntity.ok(shipments);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Shipment> getShipmentById(@PathVariable Long id){
+        Optional<Shipment> shipment = shipmentService.getShipmentById(id);
+        return shipment.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Shipment> updateShipment(@PathVariable Long id, @Valid @RequestBody Shipment shipmentDetails){
+        try{
+            Shipment updatedShipment = shipmentService.updateShipment(id, shipmentDetails);
+            return ResponseEntity.ok(updatedShipment);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteShipment(@PathVariable Long id){
+        try{
+            shipmentService.deleteShipment(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\SupplierController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Supplier;
+import com.example.onlinestore.service.SupplierService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/suppliers")
+public class SupplierController {
+
+    private final SupplierService supplierService;
+
+    @Autowired
+    public SupplierController(SupplierService supplierService){
+        this.supplierService = supplierService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Supplier> createSupplier(@Valid @RequestBody Supplier supplier){
+        Supplier createdSupplier = supplierService.createSupplier(supplier);
+        return ResponseEntity.ok(createdSupplier);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Supplier>> getAllSuppliers(){
+        List<Supplier> suppliers = supplierService.getAllSuppliers();
+        return ResponseEntity.ok(suppliers);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Supplier> getSupplierById(@PathVariable Long id){
+        Optional<Supplier> supplier = supplierService.getSupplierById(id);
+        return supplier.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Supplier> updateSupplier(@PathVariable Long id, @Valid @RequestBody Supplier supplierDetails){
+        try{
+            Supplier updatedSupplier = supplierService.updateSupplier(id, supplierDetails);
+            return ResponseEntity.ok(updatedSupplier);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSupplier(@PathVariable Long id){
+        try{
+            supplierService.deleteSupplier(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\UserController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.User;
+import com.example.onlinestore.service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
+
+    private final UserService userService;
+
+    @Autowired
+    public UserController(UserService userService){
+        this.userService = userService;
+    }
+
+    @PostMapping
+    public ResponseEntity<User> createUser(@Valid @RequestBody User user){
+        User createdUser = userService.createUser(user);
+        return ResponseEntity.ok(createdUser);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers(){
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id){
+        Optional<User> user = userService.getUserById(id);
+        return user.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody User userDetails){
+        try{
+            User updatedUser = userService.updateUser(id, userDetails);
+            return ResponseEntity.ok(updatedUser);
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id){
+        try{
+            userService.deleteUser(id);
+            return ResponseEntity.noContent().build();
+        } catch(RuntimeException e){
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
+----- .\controller\ViewAddressController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Address;
+import com.example.onlinestore.service.AddressService;
+import com.example.onlinestore.service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/addresses")
+public class ViewAddressController {
+
+    private final AddressService addressService;
+    private final UserService userService;
+
+    @Autowired
+    public ViewAddressController(AddressService addressService, UserService userService) {
+        this.addressService = addressService;
+        this.userService = userService;
+    }
+
+    // Показать список адресов
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping
+    public String listAddresses(Model model) {
+        List<Address> addresses = addressService.getAllAddresses();
+        model.addAttribute("addresses", addresses);
+        return "addresses/list";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model) {
+        model.addAttribute("address", new Address());
+        model.addAttribute("users", userService.getAllUsers());
+        return "addresses/create";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping
+    public String createAddress(@Valid @ModelAttribute("address") Address address, BindingResult result, Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("users", userService.getAllUsers());
+            return "addresses/create";
+        }
+        addressService.createAddress(address);
+        return "redirect:/addresses";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model) {
+        Address address = addressService.getAddressById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Неверный ID адреса: " + id));
+        model.addAttribute("address", address);
+        model.addAttribute("users", userService.getAllUsers());
+        return "addresses/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updateAddress(@PathVariable("id") Long id, @Valid @ModelAttribute("address") Address address, BindingResult result, Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("users", userService.getAllUsers());
+            return "addresses/edit";
+        }
+        addressService.updateAddress(id, address);
+        return "redirect:/addresses";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/delete/{id}")
+    public String deleteAddress(@PathVariable("id") Long id, Model model) {
+        addressService.deleteAddress(id);
+        return "redirect:/addresses";
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping("/{id}")
+    public String viewAddress(@PathVariable("id") Long id, Model model) {
+        Address address = addressService.getAddressById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Неверный ID адреса: " + id));
+        model.addAttribute("address", address);
+        return "addresses/view";
+    }
+}
+
+
+----- .\controller\ViewCategoryController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Category;
+import com.example.onlinestore.service.CategoryService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/categories")
+public class ViewCategoryController {
+
+    private final CategoryService categoryService;
+
+    @Autowired
+    public ViewCategoryController(CategoryService categoryService){
+        this.categoryService = categoryService;
+    }
+
+    // Добавлено
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping
+    public String listCategories(Model model){
+        List<Category> categories = categoryService.getAllCategories();
+        model.addAttribute("categories", categories);
+        return "categories/list";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model){
+        model.addAttribute("category", new Category());
+        return "categories/create";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping
+    public String createCategory(@Valid @ModelAttribute("category") Category category, BindingResult result, Model model){
+        if(result.hasErrors()){
+            return "categories/create";
+        }
+        categoryService.createCategory(category);
+        return "redirect:/categories";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model){
+        Category category = categoryService.getCategoryById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category Id:" + id));
+        model.addAttribute("category", category);
+        return "categories/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updateCategory(@PathVariable("id") Long id, @Valid @ModelAttribute("category") Category category, BindingResult result, Model model){
+        if(result.hasErrors()){
+            category.setId(id);
+            return "categories/edit";
+        }
+        categoryService.updateCategory(id, category);
+        return "redirect:/categories";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/delete/{id}")
+    public String deleteCategory(@PathVariable("id") Long id, Model model){
+        categoryService.deleteCategory(id);
+        return "redirect:/categories";
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping("/{id}")
+    public String viewCategory(@PathVariable("id") Long id, Model model){
+        Category category = categoryService.getCategoryById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category Id:" + id));
+        model.addAttribute("category", category);
+        return "categories/view";
+    }
+
+}
+
+
+----- .\controller\ViewOrderController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Order;
+import com.example.onlinestore.entity.User;
+import com.example.onlinestore.service.OrderService;
+import com.example.onlinestore.service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/orders")
+public class ViewOrderController {
+
+    private final OrderService orderService;
+    private final UserService userService;
+
+    @Autowired
+    public ViewOrderController(OrderService orderService, UserService userService){
+        this.orderService = orderService;
+        this.userService = userService;
+    }
+
+    // Добавлено
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping
+    public String listOrders(Model model){
+        List<Order> orders = orderService.getAllOrders();
+        model.addAttribute("orders", orders);
+        return "orders/list";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model){
+        model.addAttribute("order", new Order());
+        model.addAttribute("users", userService.getAllUsers());
+        return "orders/create";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping
+    public String createOrder(@Valid @ModelAttribute("order") Order order, BindingResult result, Model model){
+        if(result.hasErrors()){
+            model.addAttribute("users", userService.getAllUsers());
+            return "orders/create";
+        }
+        orderService.createOrder(order);
+        return "redirect:/orders";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model){
+        Order order = orderService.getOrderById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid order Id:" + id));
+        model.addAttribute("order", order);
+        model.addAttribute("users", userService.getAllUsers());
+        return "orders/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updateOrder(@PathVariable("id") Long id, @Valid @ModelAttribute("order") Order order, BindingResult result, Model model){
+        if(result.hasErrors()){
+            order.setId(id);
+            model.addAttribute("users", userService.getAllUsers());
+            return "orders/edit";
+        }
+        orderService.updateOrder(id, order);
+        return "redirect:/orders";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/delete/{id}")
+    public String deleteOrder(@PathVariable("id") Long id, Model model){
+        orderService.deleteOrder(id);
+        return "redirect:/orders";
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping("/{id}")
+    public String viewOrder(@PathVariable("id") Long id, Model model){
+        Order order = orderService.getOrderById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid order Id:" + id));
+        model.addAttribute("order", order);
+        return "orders/view";
+    }
+
+}
+
+
+----- .\controller\ViewOrderItemController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.OrderItem;
+import com.example.onlinestore.entity.Order;
+import com.example.onlinestore.entity.Product;
+import com.example.onlinestore.service.OrderItemService;
+import com.example.onlinestore.service.OrderService;
+import com.example.onlinestore.service.ProductService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/order-items")
+public class ViewOrderItemController {
+
+    private final OrderItemService orderItemService;
+    private final OrderService orderService;
+    private final ProductService productService;
+
+    @Autowired
+    public ViewOrderItemController(OrderItemService orderItemService, OrderService orderService, ProductService productService){
+        this.orderItemService = orderItemService;
+        this.orderService = orderService;
+        this.productService = productService;
+    }
+
+    // Добавлено
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping
+    public String listOrderItems(Model model){
+        List<OrderItem> orderItems = orderItemService.getAllOrderItems();
+        model.addAttribute("orderItems", orderItems);
+        return "orderitems/list";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model){
+        model.addAttribute("orderItem", new OrderItem());
+        model.addAttribute("orders", orderService.getAllOrders());
+        model.addAttribute("products", productService.getAllProducts());
+        return "orderitems/create";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping
+    public String createOrderItem(@Valid @ModelAttribute("orderItem") OrderItem orderItem, BindingResult result, Model model){
+        if(result.hasErrors()){
+            model.addAttribute("orders", orderService.getAllOrders());
+            model.addAttribute("products", productService.getAllProducts());
+            return "orderitems/create";
+        }
+        orderItemService.createOrderItem(orderItem);
+        return "redirect:/order-items";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model){
+        OrderItem orderItem = orderItemService.getOrderItemById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid orderItem Id:" + id));
+        model.addAttribute("orderItem", orderItem);
+        model.addAttribute("orders", orderService.getAllOrders());
+        model.addAttribute("products", productService.getAllProducts());
+        return "orderitems/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updateOrderItem(@PathVariable("id") Long id, @Valid @ModelAttribute("orderItem") OrderItem orderItem, BindingResult result, Model model){
+        if(result.hasErrors()){
+            orderItem.setId(id);
+            model.addAttribute("orders", orderService.getAllOrders());
+            model.addAttribute("products", productService.getAllProducts());
+            return "orderitems/edit";
+        }
+        orderItemService.updateOrderItem(id, orderItem);
+        return "redirect:/order-items";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/delete/{id}")
+    public String deleteOrderItem(@PathVariable("id") Long id, Model model){
+        orderItemService.deleteOrderItem(id);
+        return "redirect:/order-items";
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping("/{id}")
+    public String viewOrderItem(@PathVariable("id") Long id, Model model){
+        OrderItem orderItem = orderItemService.getOrderItemById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid orderItem Id:" + id));
+        model.addAttribute("orderItem", orderItem);
+        return "orderitems/view";
+    }
+}
+
+
+----- .\controller\ViewPaymentController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Payment;
+import com.example.onlinestore.entity.Order;
+import com.example.onlinestore.service.PaymentService;
+import com.example.onlinestore.service.OrderService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/payments")
+public class ViewPaymentController {
+
+    private final PaymentService paymentService;
+    private final OrderService orderService;
+
+    @Autowired
+    public ViewPaymentController(PaymentService paymentService, OrderService orderService){
+        this.paymentService = paymentService;
+        this.orderService = orderService;
+    }
+
+    // Добавлено
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping
+    public String listPayments(Model model){
+        List<Payment> payments = paymentService.getAllPayments();
+        model.addAttribute("payments", payments);
+        return "payments/list";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model){
+        model.addAttribute("payment", new Payment());
+        model.addAttribute("orders", orderService.getAllOrders());
+        return "payments/create";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping
+    public String createPayment(@Valid @ModelAttribute("payment") Payment payment, BindingResult result, Model model){
+        if(result.hasErrors()){
+            model.addAttribute("orders", orderService.getAllOrders());
+            return "payments/create";
+        }
+        paymentService.createPayment(payment);
+        return "redirect:/payments";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model){
+        Payment payment = paymentService.getPaymentById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid payment Id:" + id));
+        model.addAttribute("payment", payment);
+        model.addAttribute("orders", orderService.getAllOrders());
+        return "payments/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updatePayment(@PathVariable("id") Long id, @Valid @ModelAttribute("payment") Payment payment, BindingResult result, Model model){
+        if(result.hasErrors()){
+            payment.setId(id);
+            model.addAttribute("orders", orderService.getAllOrders());
+            return "payments/edit";
+        }
+        paymentService.updatePayment(id, payment);
+        return "redirect:/payments";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/delete/{id}")
+    public String deletePayment(@PathVariable("id") Long id, Model model){
+        paymentService.deletePayment(id);
+        return "redirect:/payments";
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping("/{id}")
+    public String viewPayment(@PathVariable("id") Long id, Model model){
+        Payment payment = paymentService.getPaymentById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid payment Id:" + id));
+        model.addAttribute("payment", payment);
+        return "payments/view";
+    }
+}
+
+
+----- .\controller\ViewProductController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Product;
+import com.example.onlinestore.service.ProductService;
+import com.example.onlinestore.service.CategoryService;
+import com.example.onlinestore.service.SupplierService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/products")
+public class ViewProductController {
+
+    private final ProductService productService;
+    private final CategoryService categoryService;
+    private final SupplierService supplierService;
+
+    @Autowired
+    public ViewProductController(ProductService productService,
+                                 CategoryService categoryService,
+                                 SupplierService supplierService){
+        this.productService = productService;
+        this.categoryService = categoryService;
+        this.supplierService = supplierService;
+    }
+
+    // Показать список продуктов
+// Добавлено
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping
+    public String listProducts(Model model){
+        List<Product> products = productService.getAllProducts();
+        model.addAttribute("products", products);
+        return "products/list";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model){
+        model.addAttribute("product", new Product());
+        model.addAttribute("categories", categoryService.getAllCategories());
+        model.addAttribute("suppliers", supplierService.getAllSuppliers());
+        return "products/create";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping
+    public String createProduct(@Valid @ModelAttribute("product") Product product, BindingResult result, Model model){
+        if(result.hasErrors()){
+            model.addAttribute("categories", categoryService.getAllCategories());
+            model.addAttribute("suppliers", supplierService.getAllSuppliers());
+            return "products/create";
+        }
+        productService.createProduct(product);
+        return "redirect:/products";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model){
+        Product product = productService.getProductById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid product Id:" + id));
+        model.addAttribute("product", product);
+        model.addAttribute("categories", categoryService.getAllCategories());
+        model.addAttribute("suppliers", supplierService.getAllSuppliers());
+        return "products/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updateProduct(@PathVariable("id") Long id, @Valid @ModelAttribute("product") Product product, BindingResult result, Model model){
+        if(result.hasErrors()){
+            product.setId(id);
+            model.addAttribute("categories", categoryService.getAllCategories());
+            model.addAttribute("suppliers", supplierService.getAllSuppliers());
+            return "products/edit";
+        }
+        productService.updateProduct(id, product);
+        return "redirect:/products";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/delete/{id}")
+    public String deleteProduct(@PathVariable("id") Long id, Model model){
+        productService.deleteProduct(id);
+        return "redirect:/products";
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping("/{id}")
+    public String viewProduct(@PathVariable("id") Long id, Model model){
+        Product product = productService.getProductById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid product Id:" + id));
+        model.addAttribute("product", product);
+        return "products/view";
+    }
+}
+
+
+----- .\controller\ViewShipmentController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Shipment;
+import com.example.onlinestore.entity.Order;
+import com.example.onlinestore.service.ShipmentService;
+import com.example.onlinestore.service.OrderService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/shipments")
+public class ViewShipmentController {
+
+    private final ShipmentService shipmentService;
+    private final OrderService orderService;
+
+    @Autowired
+    public ViewShipmentController(ShipmentService shipmentService, OrderService orderService){
+        this.shipmentService = shipmentService;
+        this.orderService = orderService;
+    }
+
+    // Добавлено
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping
+    public String listShipments(Model model){
+        List<Shipment> shipments = shipmentService.getAllShipments();
+        model.addAttribute("shipments", shipments);
+        return "shipments/list";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model){
+        model.addAttribute("shipment", new Shipment());
+        model.addAttribute("orders", orderService.getAllOrders());
+        return "shipments/create";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping
+    public String createShipment(@Valid @ModelAttribute("shipment") Shipment shipment, BindingResult result, Model model){
+        if(result.hasErrors()){
+            model.addAttribute("orders", orderService.getAllOrders());
+            return "shipments/create";
+        }
+        shipmentService.createShipment(shipment);
+        return "redirect:/shipments";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model){
+        Shipment shipment = shipmentService.getShipmentById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid shipment Id:" + id));
+        model.addAttribute("shipment", shipment);
+        model.addAttribute("orders", orderService.getAllOrders());
+        return "shipments/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updateShipment(@PathVariable("id") Long id, @Valid @ModelAttribute("shipment") Shipment shipment, BindingResult result, Model model){
+        if(result.hasErrors()){
+            shipment.setId(id);
+            model.addAttribute("orders", orderService.getAllOrders());
+            return "shipments/edit";
+        }
+        shipmentService.updateShipment(id, shipment);
+        return "redirect:/shipments";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/delete/{id}")
+    public String deleteShipment(@PathVariable("id") Long id, Model model){
+        shipmentService.deleteShipment(id);
+        return "redirect:/shipments";
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping("/{id}")
+    public String viewShipment(@PathVariable("id") Long id, Model model){
+        Shipment shipment = shipmentService.getShipmentById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid shipment Id:" + id));
+        model.addAttribute("shipment", shipment);
+        return "shipments/view";
+    }
+}
+
+
+----- .\controller\ViewSupplierController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.Supplier;
+import com.example.onlinestore.service.SupplierService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/suppliers")
+public class ViewSupplierController {
+
+    private final SupplierService supplierService;
+
+    @Autowired
+    public ViewSupplierController(SupplierService supplierService){
+        this.supplierService = supplierService;
+    }
+
+    // Добавлено
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping
+    public String listSuppliers(Model model){
+        List<Supplier> suppliers = supplierService.getAllSuppliers();
+        model.addAttribute("suppliers", suppliers);
+        return "suppliers/list";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model){
+        model.addAttribute("supplier", new Supplier());
+        return "suppliers/create";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping
+    public String createSupplier(@Valid @ModelAttribute("supplier") Supplier supplier, BindingResult result, Model model){
+        if(result.hasErrors()){
+            return "suppliers/create";
+        }
+        supplierService.createSupplier(supplier);
+        return "redirect:/suppliers";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model){
+        Supplier supplier = supplierService.getSupplierById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid supplier Id:" + id));
+        model.addAttribute("supplier", supplier);
+        return "suppliers/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updateSupplier(@PathVariable("id") Long id, @Valid @ModelAttribute("supplier") Supplier supplier, BindingResult result, Model model){
+        if(result.hasErrors()){
+            supplier.setId(id);
+            return "suppliers/edit";
+        }
+        supplierService.updateSupplier(id, supplier);
+        return "redirect:/suppliers";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/delete/{id}")
+    public String deleteSupplier(@PathVariable("id") Long id, Model model){
+        supplierService.deleteSupplier(id);
+        return "redirect:/suppliers";
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'MANAGER', 'ADMIN')")
+    @GetMapping("/{id}")
+    public String viewSupplier(@PathVariable("id") Long id, Model model){
+        Supplier supplier = supplierService.getSupplierById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid supplier Id:" + id));
+        model.addAttribute("supplier", supplier);
+        return "suppliers/view";
+    }
+}
+
+
+----- .\controller\ViewUserController.java -----
+package com.example.onlinestore.controller;
+
+import com.example.onlinestore.entity.User;
+import com.example.onlinestore.service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/users")
+public class ViewUserController {
+
+    private final UserService userService;
+
+    @Autowired
+    public ViewUserController(UserService userService){
+        this.userService = userService;
+    }
+
+    // Добавлено
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping
+    public String listUsers(Model model){
+        List<User> users = userService.getAllUsers();
+        model.addAttribute("users", users);
+        return "users/list";
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping("/new")
+    public String showCreateForm(Model model){
+        model.addAttribute("user", new User());
+        return "users/create";
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PostMapping
+    public String createUser(@Valid @ModelAttribute("user") User user, BindingResult result, Model model){
+        if(result.hasErrors()){
+            return "users/create";
+        }
+        userService.createUser(user);
+        return "redirect:/users";
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable("id") Long id, Model model){
+        User user = userService.getUserById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + id));
+        model.addAttribute("user", user);
+        return "users/edit";
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PostMapping("/update/{id}")
+    public String updateUser(@PathVariable("id") Long id, @Valid @ModelAttribute("user") User user, BindingResult result, Model model){
+        if(result.hasErrors()){
+            user.setId(id);
+            return "users/edit";
+        }
+        userService.updateUser(id, user);
+        return "redirect:/users";
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/delete/{id}")
+    public String deleteUser(@PathVariable("id") Long id, Model model){
+        userService.deleteUser(id);
+        return "redirect:/users";
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping("/{id}")
+    public String viewUser(@PathVariable("id") Long id, Model model){
+        User user = userService.getUserById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid user Id:" + id));
+        model.addAttribute("user", user);
+        return "users/view";
+    }
+}
+
+
+----- .\entity\Address.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
+
+@Entity
+@Table(name = "addresses")
+@Getter
+@Setter
+public class Address {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "Улица обязательна для заполнения")
+    @Size(max = 100, message = "Улица может содержать до 100 символов")
+    private String street;
+
+    @NotBlank(message = "Город обязателен для заполнения")
+    @Size(max = 50, message = "Город может содержать до 50 символов")
+    private String city;
+
+    @NotBlank(message = "Штат обязателен для заполнения")
+    @Size(max = 50, message = "Штат может содержать до 50 символов")
+    private String state;
+
+    @NotBlank(message = "Почтовый код обязателен для заполнения")
+    @Size(max = 20, message = "Почтовый код может содержать до 20 символов")
+    private String postalCode;
+
+    @NotBlank(message = "Страна обязательна для заполнения")
+    @Size(max = 50, message = "Страна может содержать до 50 символов")
+    private String country;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @JsonBackReference
+    @NotNull(message = "Пользователь обязателен для адреса")
+    private User user;
+    // Constructors
+    public Address() {}
+
+    public Address(String street, String city, String state, String postalCode, String country, User user) {
+        this.street = street;
+        this.city = city;
+        this.state = state;
+        this.postalCode = postalCode;
+        this.country = country;
+        this.user = user;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public void setStreet(String street) {
+        this.street = street;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    // Добавляем сеттер для id
+    public void setId(Long id) {
+        this.id = id;
+    }
+}
+
+
+----- .\entity\Category.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "categories")
+public class Category {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true)
+    @NotBlank(message = "Название категории обязательно")
+    @Size(max = 50, message = "Название категории может содержать до 50 символов")
+    private String name;
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private Set<Product> products = new HashSet<>();
+
+    // Constructors
+    public Category() {}
+
+    public Category(String name) {
+        this.name = name;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Set<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(Set<Product> products) {
+        this.products = products;
+    }
+}
+
+
+----- .\entity\Order.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "orders_table") // 'order' is a reserved keyword in SQL
+public class Order {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull(message = "Order date is mandatory")
+    private LocalDateTime orderDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @JsonBackReference
+    private User user;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private Set<OrderItem> orderItems = new HashSet<>();
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private Shipment shipment;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private Payment payment;
+
+    // Constructors
+    public Order() {}
+
+    public Order(LocalDateTime orderDate, User user) {
+        this.orderDate = orderDate;
+        this.user = user;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public LocalDateTime getOrderDate() {
+        return orderDate;
+    }
+
+    public void setOrderDate(LocalDateTime orderDate) {
+        this.orderDate = orderDate;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Set<OrderItem> getOrderItems() {
+        return orderItems;
+    }
+
+    public void setOrderItems(Set<OrderItem> orderItems) {
+        this.orderItems = orderItems;
+    }
+
+    public Shipment getShipment() {
+        return shipment;
+    }
+
+    public void setShipment(Shipment shipment) {
+        this.shipment = shipment;
+    }
+
+    public Payment getPayment() {
+        return payment;
+    }
+
+    public void setPayment(Payment payment) {
+        this.payment = payment;
+    }
+}
+
+
+----- .\entity\OrderItem.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "order_items")
+public class OrderItem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull(message = "Quantity is mandatory")
+    @Positive(message = "Quantity must be positive")
+    private Integer quantity;
+
+    @NotNull(message = "Unit price is mandatory")
+    @Positive(message = "Unit price must be positive")
+    private BigDecimal unitPrice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    @JsonBackReference
+    private Order order;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    @JsonBackReference
+    private Product product;
+
+    // Constructors
+    public OrderItem() {}
+
+    public OrderItem(Integer quantity, BigDecimal unitPrice, Order order, Product product) {
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
+        this.order = order;
+        this.product = product;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public BigDecimal getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    public Order getOrder() {
+        return order;
+    }
+
+    public void setOrder(Order order) {
+        this.order = order;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public void setProduct(Product product) {
+        this.product = product;
+    }
+}
+
+
+----- .\entity\Payment.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "payments")
+public class Payment {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "Payment method is mandatory")
+    private String paymentMethod;
+
+    @NotNull(message = "Payment date is mandatory")
+    private LocalDateTime paymentDate;
+
+    @NotNull(message = "Amount is mandatory")
+    private BigDecimal amount;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    @JsonBackReference
+    private Order order;
+
+    // Constructors
+    public Payment() {}
+
+    public Payment(String paymentMethod, LocalDateTime paymentDate, BigDecimal amount, Order order) {
+        this.paymentMethod = paymentMethod;
+        this.paymentDate = paymentDate;
+        this.amount = amount;
+        this.order = order;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public LocalDateTime getPaymentDate() {
+        return paymentDate;
+    }
+
+    public void setPaymentDate(LocalDateTime paymentDate) {
+        this.paymentDate = paymentDate;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public Order getOrder() {
+        return order;
+    }
+
+    public void setOrder(Order order) {
+        this.order = order;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+}
+
+
+----- .\entity\Product.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
+import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "products")
+public class Product {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "Product name is mandatory")
+    @Size(max = 100, message = "Product name can be up to 100 characters")
+    private String name;
+
+    @NotBlank(message = "Description is mandatory")
+    @Size(max = 500, message = "Description can be up to 500 characters")
+    private String description;
+
+    @NotNull(message = "Price is mandatory")
+    @Positive(message = "Price must be positive")
+    private BigDecimal price;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    @JsonBackReference
+    private Category category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id")
+    @JsonBackReference
+    private Supplier supplier;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonBackReference
+    private Set<OrderItem> orderItems = new HashSet<>();
+
+    // Constructors
+    public Product() {}
+
+    public Product(String name, String description, BigDecimal price, Category category, Supplier supplier) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.category = category;
+        this.supplier = supplier;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+
+    public Supplier getSupplier() {
+        return supplier;
+    }
+
+    public void setSupplier(Supplier supplier) {
+        this.supplier = supplier;
+    }
+
+    public Set<OrderItem> getOrderItems() {
+        return orderItems;
+    }
+
+    public void setOrderItems(Set<OrderItem> orderItems) {
+        this.orderItems = orderItems;
+    }
+}
+
+
+----- .\entity\Role.java -----
+package com.example.onlinestore.entity;
+
+import jakarta.persistence.*;
+import java.util.Set;
+
+@Entity
+@Table(name = "roles")
+public class Role {
+
+    @Id
+    @Column(length = 20)
+    private String name; // Например, "ROLE_USER", "ROLE_MANAGER", "ROLE_ADMIN"
+
+    @ManyToMany(mappedBy = "roles")
+    private Set<User> users;
+
+    // Конструкторы
+    public Role() {}
+
+    public Role(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Set<User> getUsers() {
+        return users;
+    }
+
+    public void setUsers(Set<User> users) {
+        this.users = users;
+    }
+}
+
+
+----- .\entity\Shipment.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "shipments")
+public class Shipment {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "Shipment method is mandatory")
+    private String shipmentMethod;
+
+    @NotNull(message = "Shipment date is mandatory")
+    private LocalDateTime shipmentDate;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    @JsonBackReference
+    private Order order;
+
+    // Constructors
+    public Shipment() {}
+
+    public Shipment(String shipmentMethod, LocalDateTime shipmentDate, Order order) {
+        this.shipmentMethod = shipmentMethod;
+        this.shipmentDate = shipmentDate;
+        this.order = order;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getShipmentMethod() {
+        return shipmentMethod;
+    }
+
+    public void setShipmentMethod(String shipmentMethod) {
+        this.shipmentMethod = shipmentMethod;
+    }
+
+    public LocalDateTime getShipmentDate() {
+        return shipmentDate;
+    }
+
+    public void setShipmentDate(LocalDateTime shipmentDate) {
+        this.shipmentDate = shipmentDate;
+    }
+
+    public Order getOrder() {
+        return order;
+    }
+
+    public void setOrder(Order order) {
+        this.order = order;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+}
+
+
+----- .\entity\Supplier.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "suppliers")
+public class Supplier {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "Supplier name is mandatory")
+    @Size(max = 100, message = "Supplier name can be up to 100 characters")
+    private String name;
+
+    @NotBlank(message = "Contact email is mandatory")
+    @Size(max = 100, message = "Contact email can be up to 100 characters")
+    private String contactEmail;
+
+    @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private Set<Product> products = new HashSet<>();
+
+    // Constructors
+    public Supplier() {}
+
+    public Supplier(String name, String contactEmail) {
+        this.name = name;
+        this.contactEmail = contactEmail;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public Set<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(Set<Product> products) {
+        this.products = products;
+    }
+}
+
+
+----- .\entity\User.java -----
+package com.example.onlinestore.entity;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "Имя обязательно для заполнения")
+    @Size(max = 50, message = "Имя может содержать до 50 символов")
+    private String name;
+
+    @NotBlank(message = "Email is mandatory")
+    @Email(message = "Email should be valid")
+    @Size(max = 100, message = "Email может содержать до 100 символов")
+    @Column(unique = true)
+    private String email;
+
+    @NotBlank(message = "Пароль обязателен для заполнения")
+    @Size(min = 6, message = "Пароль должен содержать минимум 6 символов")
+    private String password;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private Set<Order> orders = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private Set<Address> addresses = new HashSet<>();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "users_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_name")
+    )
+    private Set<Role> roles = new HashSet<>();
+
+    // Constructors
+    public User() {}
+
+    public User(String name, String email, String password) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+    }
+
+    // Getters and Setters
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Set<Order> getOrders() {
+        return orders;
+    }
+
+    public void setOrders(Set<Order> orders) {
+        this.orders = orders;
+    }
+
+    public Set<Address> getAddresses() {
+        return addresses;
+    }
+
+    public void setAddresses(Set<Address> addresses) {
+        this.addresses = addresses;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+
+    public void addRole(Role role) {
+        this.roles.add(role);
+        role.getUsers().add(this);
+    }
+
+    public void removeRole(Role role) {
+        this.roles.remove(role);
+        role.getUsers().remove(this);
+    }
+}
+
+
+----- .\exception\GlobalExceptionHandler.java -----
+package com.example.onlinestore.exception;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Object> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request){
+        Map<String, String> body = new HashMap<>();
+        body.put("error", ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Object> handleValidationExceptions(MethodArgumentNotValidException ex){
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError)error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Object> handleAllExceptions(Exception ex, WebRequest request){
+        Map<String, String> body = new HashMap<>();
+        body.put("error", ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+
+
+----- .\exception\ResourceNotFoundException.java -----
+package com.example.onlinestore.exception;
+
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message){
+        super(message);
+    }
+}
+
+
+----- .\repository\AddressRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.Address;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface AddressRepository extends JpaRepository<Address, Long>{
+}
+
+
+----- .\repository\CategoryRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.Category;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface CategoryRepository extends JpaRepository<Category, Long>{
+}
+
+
+----- .\repository\OrderItemRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.OrderItem;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface OrderItemRepository extends JpaRepository<OrderItem, Long>{
+}
+
+
+----- .\repository\OrderRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.Order;
+import com.example.onlinestore.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface OrderRepository extends JpaRepository<Order, Long>{
+    List<Order> findByUser(User user);
+}
+
+
+----- .\repository\PaymentRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, Long>{
+}
+
+
+----- .\repository\ProductRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ProductRepository extends JpaRepository<Product, Long>{
+}
+
+
+----- .\repository\RoleRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.Role;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface RoleRepository extends JpaRepository<Role, String> {
+}
+
+
+----- .\repository\ShipmentRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.Shipment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ShipmentRepository extends JpaRepository<Shipment, Long>{
+}
+
+
+----- .\repository\SupplierRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.Supplier;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface SupplierRepository extends JpaRepository<Supplier, Long>{
+}
+
+
+----- .\repository\UserRepository.java -----
+package com.example.onlinestore.repository;
+
+import com.example.onlinestore.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
+}
+
+
+----- .\service\AddressService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Address;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface AddressService {
+    Address createAddress(Address address);
+    List<Address> getAllAddresses();
+    Optional<Address> getAddressById(Long id);
+    Address updateAddress(Long id, Address address);
+    void deleteAddress(Long id);
+}
+
+
+----- .\service\AddressServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Address;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.AddressRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class AddressServiceImpl implements AddressService{
+
+    private final AddressRepository addressRepository;
+
+    @Autowired
+    public AddressServiceImpl(AddressRepository addressRepository){
+        this.addressRepository = addressRepository;
+    }
+
+    @Override
+    public Address createAddress(Address address){
+        return addressRepository.save(address);
+    }
+
+    @Override
+    public List<Address> getAllAddresses(){
+        return addressRepository.findAll();
+    }
+
+    @Override
+    public Optional<Address> getAddressById(Long id){
+        return addressRepository.findById(id);
+    }
+
+    @Override
+    public Address updateAddress(Long id, Address addressDetails){
+        Address address = addressRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id " + id));
+        address.setStreet(addressDetails.getStreet());
+        address.setCity(addressDetails.getCity());
+        address.setState(addressDetails.getState());
+        address.setPostalCode(addressDetails.getPostalCode());
+        address.setCountry(addressDetails.getCountry());
+        address.setUser(addressDetails.getUser());
+        return addressRepository.save(address);
+    }
+
+    @Override
+    public void deleteAddress(Long id){
+        Address address = addressRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id " + id));
+        addressRepository.delete(address);
+    }
+}
+
+
+----- .\service\CategoryService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Category;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface CategoryService {
+    Category createCategory(Category category);
+    List<Category> getAllCategories();
+    Optional<Category> getCategoryById(Long id);
+    Category updateCategory(Long id, Category category);
+    void deleteCategory(Long id);
+}
+
+
+----- .\service\CategoryServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Category;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.CategoryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class CategoryServiceImpl implements CategoryService{
+
+    private final CategoryRepository categoryRepository;
+
+    @Autowired
+    public CategoryServiceImpl(CategoryRepository categoryRepository){
+        this.categoryRepository = categoryRepository;
+    }
+
+    @Override
+    public Category createCategory(Category category){
+        return categoryRepository.save(category);
+    }
+
+    @Override
+    public List<Category> getAllCategories(){
+        return categoryRepository.findAll();
+    }
+
+    @Override
+    public Optional<Category> getCategoryById(Long id){
+        return categoryRepository.findById(id);
+    }
+
+    @Override
+    public Category updateCategory(Long id, Category categoryDetails){
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id " + id));
+        category.setName(categoryDetails.getName());
+        return categoryRepository.save(category);
+    }
+
+    @Override
+    public void deleteCategory(Long id){
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id " + id));
+        categoryRepository.delete(category);
+    }
+}
+
+
+----- .\service\CustomUserDetailsService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.User;
+import com.example.onlinestore.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.*;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.*;
+import org.springframework.stereotype.Service;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException{
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден с email: " + email));
+
+        Set<GrantedAuthority> authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName()))
+                .collect(Collectors.toSet());
+
+        return new org.springframework.security.core.userdetails.User(
+                user.getEmail(),
+                user.getPassword(),
+                authorities
+        );
+    }
+}
+
+
+----- .\service\OrderItemService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.OrderItem;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface OrderItemService {
+    OrderItem createOrderItem(OrderItem orderItem);
+    List<OrderItem> getAllOrderItems();
+    Optional<OrderItem> getOrderItemById(Long id);
+    OrderItem updateOrderItem(Long id, OrderItem orderItem);
+    void deleteOrderItem(Long id);
+}
+
+
+----- .\service\OrderItemServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.OrderItem;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.OrderItemRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class OrderItemServiceImpl implements OrderItemService{
+
+    private final OrderItemRepository orderItemRepository;
+
+    @Autowired
+    public OrderItemServiceImpl(OrderItemRepository orderItemRepository){
+        this.orderItemRepository = orderItemRepository;
+    }
+
+    @Override
+    public OrderItem createOrderItem(OrderItem orderItem){
+        return orderItemRepository.save(orderItem);
+    }
+
+    @Override
+    public List<OrderItem> getAllOrderItems(){
+        return orderItemRepository.findAll();
+    }
+
+    @Override
+    public Optional<OrderItem> getOrderItemById(Long id){
+        return orderItemRepository.findById(id);
+    }
+
+    @Override
+    public OrderItem updateOrderItem(Long id, OrderItem orderItemDetails){
+        OrderItem orderItem = orderItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("OrderItem not found with id " + id));
+        orderItem.setQuantity(orderItemDetails.getQuantity());
+        orderItem.setUnitPrice(orderItemDetails.getUnitPrice());
+        orderItem.setOrder(orderItemDetails.getOrder());
+        orderItem.setProduct(orderItemDetails.getProduct());
+        return orderItemRepository.save(orderItem);
+    }
+
+    @Override
+    public void deleteOrderItem(Long id){
+        OrderItem orderItem = orderItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("OrderItem not found with id " + id));
+        orderItemRepository.delete(orderItem);
+    }
+}
+
+
+----- .\service\OrderService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Order;
+import com.example.onlinestore.entity.User;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface OrderService {
+    Order createOrder(Order order);
+    List<Order> getAllOrders();
+    List<Order> getOrdersByUser(User user);
+    Optional<Order> getOrderById(Long id);
+    Order updateOrder(Long id, Order order);
+    void deleteOrder(Long id);
+}
+
+
+----- .\service\OrderServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Order;
+import com.example.onlinestore.entity.User;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.OrderRepository;
+import com.example.onlinestore.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class OrderServiceImpl implements OrderService{
+
+    private final OrderRepository orderRepository;
+    private final UserRepository userRepository;
+
+    @Autowired
+    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository){
+        this.orderRepository = orderRepository;
+        this.userRepository = userRepository;
+    }
+
+    @Override
+    public Order createOrder(Order order){
+        return orderRepository.save(order);
+    }
+
+    @Override
+    public List<Order> getAllOrders(){
+        return orderRepository.findAll();
+    }
+
+    @Override
+    public List<Order> getOrdersByUser(User user){
+        return orderRepository.findByUser(user);
+    }
+
+    @Override
+    public Optional<Order> getOrderById(Long id){
+        return orderRepository.findById(id);
+    }
+
+    @Override
+    public Order updateOrder(Long id, Order orderDetails){
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id " + id));
+        order.setOrderDate(orderDetails.getOrderDate());
+        order.setUser(orderDetails.getUser());
+        // Update other fields as necessary
+        return orderRepository.save(order);
+    }
+
+    @Override
+    public void deleteOrder(Long id){
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id " + id));
+        orderRepository.delete(order);
+    }
+}
+
+
+----- .\service\PaymentService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Payment;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface PaymentService {
+    Payment createPayment(Payment payment);
+    List<Payment> getAllPayments();
+    Optional<Payment> getPaymentById(Long id);
+    Payment updatePayment(Long id, Payment payment);
+    void deletePayment(Long id);
+}
+
+
+----- .\service\PaymentServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Payment;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.PaymentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class PaymentServiceImpl implements PaymentService {
+
+    private final PaymentRepository paymentRepository;
+
+    @Autowired
+    public PaymentServiceImpl(PaymentRepository paymentRepository){
+        this.paymentRepository = paymentRepository;
+    }
+
+    @Override
+    public Payment createPayment(Payment payment){
+        return paymentRepository.save(payment);
+    }
+
+    @Override
+    public List<Payment> getAllPayments(){
+        return paymentRepository.findAll();
+    }
+
+    @Override
+    public Optional<Payment> getPaymentById(Long id){
+        return paymentRepository.findById(id);
+    }
+
+    @Override
+    public Payment updatePayment(Long id, Payment paymentDetails){
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id " + id));
+        payment.setPaymentMethod(paymentDetails.getPaymentMethod());
+        payment.setPaymentDate(paymentDetails.getPaymentDate());
+        payment.setAmount(paymentDetails.getAmount());
+        payment.setOrder(paymentDetails.getOrder());
+        return paymentRepository.save(payment);
+    }
+
+    @Override
+    public void deletePayment(Long id){
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id " + id));
+        paymentRepository.delete(payment);
+    }
+}
+
+
+----- .\service\ProductService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Product;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface ProductService {
+    Product createProduct(Product product);
+    List<Product> getAllProducts();
+    Optional<Product> getProductById(Long id);
+    Product updateProduct(Long id, Product product);
+    void deleteProduct(Long id);
+}
+
+
+----- .\service\ProductServiceImpl.java -----
+// src/main/java/com/example/onlinestore/service/ProductServiceImpl.java
+
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Product;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.ProductRepository;
+import com.example.onlinestore.repository.CategoryRepository;
+import com.example.onlinestore.repository.SupplierRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class ProductServiceImpl implements ProductService{
+
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final SupplierRepository supplierRepository;
+
+    @Autowired
+    public ProductServiceImpl(ProductRepository productRepository,
+                              CategoryRepository categoryRepository,
+                              SupplierRepository supplierRepository){
+        this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
+        this.supplierRepository = supplierRepository;
+    }
+
+    @Override
+    public Product createProduct(Product product){
+        return productRepository.save(product);
+    }
+
+    @Override
+    public List<Product> getAllProducts(){
+        return productRepository.findAll();
+    }
+
+    @Override
+    public Optional<Product> getProductById(Long id){
+        return productRepository.findById(id);
+    }
+
+    @Override
+    public Product updateProduct(Long id, Product productDetails){
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id " + id));
+        product.setName(productDetails.getName());
+        product.setDescription(productDetails.getDescription());
+        product.setPrice(productDetails.getPrice());
+        product.setCategory(productDetails.getCategory());
+        product.setSupplier(productDetails.getSupplier());
+        return productRepository.save(product);
+    }
+
+    @Override
+    public void deleteProduct(Long id){
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id " + id));
+        productRepository.delete(product);
+    }
+}
+
+
+----- .\service\RoleService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Role;
+import java.util.List;
+
+public interface RoleService {
+    List<Role> getAllRoles();
+    Role getRoleByName(String name);
+}
+
+----- .\service\RoleServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Role;
+import com.example.onlinestore.repository.RoleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class RoleServiceImpl implements RoleService {
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Override
+    public List<Role> getAllRoles(){
+        return roleRepository.findAll();
+    }
+
+    @Override
+    public Role getRoleByName(String name){
+        return roleRepository.findById(name)
+                .orElseThrow(() -> new IllegalArgumentException("Роль не найдена: " + name));
+    }
+}
+
+
+----- .\service\ShipmentService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Shipment;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface ShipmentService {
+    Shipment createShipment(Shipment shipment);
+    List<Shipment> getAllShipments();
+    Optional<Shipment> getShipmentById(Long id);
+    Shipment updateShipment(Long id, Shipment shipment);
+    void deleteShipment(Long id);
+}
+
+
+----- .\service\ShipmentServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Shipment;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.ShipmentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class ShipmentServiceImpl implements ShipmentService {
+
+    private final ShipmentRepository shipmentRepository;
+
+    @Autowired
+    public ShipmentServiceImpl(ShipmentRepository shipmentRepository){
+        this.shipmentRepository = shipmentRepository;
+    }
+
+    @Override
+    public Shipment createShipment(Shipment shipment){
+        return shipmentRepository.save(shipment);
+    }
+
+    @Override
+    public List<Shipment> getAllShipments(){
+        return shipmentRepository.findAll();
+    }
+
+    @Override
+    public Optional<Shipment> getShipmentById(Long id){
+        return shipmentRepository.findById(id);
+    }
+
+    @Override
+    public Shipment updateShipment(Long id, Shipment shipmentDetails){
+        Shipment shipment = shipmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Shipment not found with id " + id));
+        shipment.setShipmentMethod(shipmentDetails.getShipmentMethod());
+        shipment.setShipmentDate(shipmentDetails.getShipmentDate());
+        shipment.setOrder(shipmentDetails.getOrder());
+        return shipmentRepository.save(shipment);
+    }
+
+    @Override
+    public void deleteShipment(Long id){
+        Shipment shipment = shipmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Shipment not found with id " + id));
+        shipmentRepository.delete(shipment);
+    }
+}
+
+
+----- .\service\SupplierService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Supplier;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface SupplierService {
+    Supplier createSupplier(Supplier supplier);
+    List<Supplier> getAllSuppliers();
+    Optional<Supplier> getSupplierById(Long id);
+    Supplier updateSupplier(Long id, Supplier supplier);
+    void deleteSupplier(Long id);
+}
+
+
+----- .\service\SupplierServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.Supplier;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.SupplierRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class SupplierServiceImpl implements SupplierService{
+
+    private final SupplierRepository supplierRepository;
+
+    @Autowired
+    public SupplierServiceImpl(SupplierRepository supplierRepository){
+        this.supplierRepository = supplierRepository;
+    }
+
+    @Override
+    public Supplier createSupplier(Supplier supplier){
+        return supplierRepository.save(supplier);
+    }
+
+    @Override
+    public List<Supplier> getAllSuppliers(){
+        return supplierRepository.findAll();
+    }
+
+    @Override
+    public Optional<Supplier> getSupplierById(Long id){
+        return supplierRepository.findById(id);
+    }
+
+    @Override
+    public Supplier updateSupplier(Long id, Supplier supplierDetails){
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id " + id));
+        supplier.setName(supplierDetails.getName());
+        supplier.setContactEmail(supplierDetails.getContactEmail());
+        return supplierRepository.save(supplier);
+    }
+
+    @Override
+    public void deleteSupplier(Long id){
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id " + id));
+        supplierRepository.delete(supplier);
+    }
+}
+
+
+----- .\service\UserService.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.User;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface UserService {
+    User createUser(User user);
+    List<User> getAllUsers();
+    Optional<User> getUserById(Long id);
+    User updateUser(Long id, User user);
+    void deleteUser(Long id);
+    void saveUser(User user);
+    boolean existsByEmail(String email);
+    Optional<User> findByEmail(String email);
+}
+
+
+----- .\service\UserServiceImpl.java -----
+package com.example.onlinestore.service;
+
+import com.example.onlinestore.entity.User;
+import com.example.onlinestore.entity.Role;
+import com.example.onlinestore.exception.ResourceNotFoundException;
+import com.example.onlinestore.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class UserServiceImpl implements UserService{
+
+    private final UserRepository userRepository;
+    private final RoleService roleService; // Добавлено
+
+    @Autowired
+    public UserServiceImpl(UserRepository userRepository, RoleService roleService){
+        this.userRepository = userRepository;
+        this.roleService = roleService; // Добавлено
+    }
+
+    @Override
+    public User createUser(User user){
+        // Назначение роли ROLE_USER при создании пользователя
+        Role userRole = roleService.getRoleByName("ROLE_USER");
+        user.getRoles().add(userRole);
+        return userRepository.save(user);
+    }
+
+    @Override
+    public List<User> getAllUsers(){
+        return userRepository.findAll();
+    }
+
+    @Override
+    public Optional<User> getUserById(Long id){
+        return userRepository.findById(id);
+    }
+
+    @Override
+    public User updateUser(Long id, User userDetails){
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + id));
+        user.setName(userDetails.getName());
+        user.setEmail(userDetails.getEmail());
+        user.setPassword(userDetails.getPassword());
+        return userRepository.save(user);
+    }
+
+    @Override
+    public void deleteUser(Long id){
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + id));
+        userRepository.delete(user);
+    }
+
+    @Override
+    public void saveUser(User user){
+        userRepository.save(user);
+    }
+
+    @Override
+    public boolean existsByEmail(String email){
+        return userRepository.existsByEmail(email);
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email){
+        return userRepository.findByEmail(email);
+    }
+}
+
+pom.xml:
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.4</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.example</groupId>
+    <artifactId>online-store</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>online-store</name>
+    <description>online-store</description>
+    <url/>
+    <licenses>
+        <license/>
+    </licenses>
+    <developers>
+        <developer/>
+    </developers>
+    <scm>
+        <connection/>
+        <developerConnection/>
+        <tag/>
+        <url/>
+    </scm>
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+    <dependencies>
+        <!-- Spring Boot Starter Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Starter Data JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL Driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Spring Boot Starter Validation -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring Boot Starter Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Springdoc OpenAPI UI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
+application.properties:
+spring.datasource.url=jdbc:postgresql://localhost:5432/online-store_db
+spring.datasource.username=postgres
+spring.datasource.password=8082005MB
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+server.port=8080
+server.error.whitelabel.enabled=false
+
+spring.application.name=online-store
+
+maven-wrapper.properties:
+wrapperVersion=3.3.2
+distributionType=only-script
+distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip
+

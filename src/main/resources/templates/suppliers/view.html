@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Поставщика</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Поставщика</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${supplier.id}">1</span></p>
+    <p><strong>Название:</strong> <span th:text="${supplier.name}">Название</span></p>
+    <p><strong>Email Контакта:</strong> <span th:text="${supplier.contactEmail}">email@example.com</span></p>
+</div>
+<div>
+    <a th:href="@{/suppliers/edit/{id}(id=${supplier.id})}">Редактировать</a> |
+    <a th:href="@{/suppliers}">Назад к списку</a>
+</div>
+</body>
+</html>

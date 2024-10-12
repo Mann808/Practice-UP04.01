@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Элемента Заказа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Элемента Заказа</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${orderItem.id}">1</span></p>
+    <p><strong>Заказ:</strong> <span th:text="'Заказ #' + ${orderItem.order.id}">Заказ</span></p>
+    <p><strong>Продукт:</strong> <span th:text="${orderItem.product.name}">Продукт</span></p>
+    <p><strong>Количество:</strong> <span th:text="${orderItem.quantity}">Количество</span></p>
+    <p><strong>Цена за Единицу:</strong> <span th:text="${orderItem.unitPrice}">Цена за Единицу</span></p>
+    <p><strong>Общая Цена:</strong> <span th:text="${orderItem.unitPrice.multiply(orderItem.quantity)}">Общая Цена</span></p>
+</div>
+<div>
+    <a th:href="@{/order-items/edit/{id}(id=${orderItem.id})}">Редактировать</a> |
+    <a th:href="@{/order-items}">Назад к списку</a>
+</div>
+</body>
+</html>

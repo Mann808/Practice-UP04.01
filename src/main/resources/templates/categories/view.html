@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Категории</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Категории</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${category.id}">1</span></p>
+    <p><strong>Название:</strong> <span th:text="${category.name}">Название</span></p>
+</div>
+<div>
+    <a th:href="@{/categories/edit/{id}(id=${category.id})}">Редактировать</a> |
+    <a th:href="@{/categories}">Назад к списку</a>
+</div>
+</body>
+</html>

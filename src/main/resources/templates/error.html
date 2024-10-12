@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Ошибка</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+    <style>
+        /* Дополнительные стили */
+        .error-container {
+            text-align: center;
+            padding: 50px;
+        }
+        .error-code {
+            font-size: 100px;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .error-message {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+        .error-details {
+            margin-top: 10px;
+            color: #6c757d;
+        }
+        .home-link {
+            margin-top: 30px;
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .home-link:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="error-container">
+    <div class="error-code" th:text="${status}">500</div>
+    <div class="error-message" th:text="${error}">Внутренняя ошибка сервера</div>
+    <div class="error-details" th:text="${message}">Что-то пошло не так.</div>
+    <a th:href="@{/}" class="home-link">Вернуться на Главную</a>
+</div>
+</body>
+</html>

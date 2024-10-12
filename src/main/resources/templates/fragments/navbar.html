@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Навигационная панель</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<nav>
+    <ul>
+        <li><a th:href="@{/}">Главная</a></li>
+        <li><a th:href="@{/products}">Продукты</a></li>
+        <li><a th:href="@{/orders}">Заказы</a></li>
+        <li th:if="${#authorization.expression('hasRole(''ADMIN'')')}"><a th:href="@{/admin/dashboard}">Админка</a></li>
+        <li th:if="${#authorization.expression('hasRole(''MANAGER'')')}"><a th:href="@{/manager/dashboard}">Менеджер</a></li>
+        <li th:if="${#authorization.expression('isAuthenticated()')}">
+            Привет, <span th:text="${#authentication.name}">User</span>!
+            <a th:href="@{/logout}">Выйти</a>
+        </li>
+        <li th:if="${#authorization.expression('!isAuthenticated()')}">
+            <a th:href="@{/login}">Войти</a>
+            <a th:href="@{/register}">Регистрация</a>
+        </li>
+    </ul>
+</nav>
+<div th:replace="~{::body}"></div>
+</body>
+</html>

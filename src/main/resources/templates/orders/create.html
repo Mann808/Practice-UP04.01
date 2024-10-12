@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Заказ</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Заказ</h1>
+<form th:action="@{/orders}" th:object="${order}" method="post">
+    <div>
+        <label for="orderDate">Дата Заказа:</label>
+        <input type="datetime-local" id="orderDate" th:field="*{orderDate}" />
+        <span th:if="${#fields.hasErrors('orderDate')}" th:errors="*{orderDate}"></span>
+    </div>
+    <div>
+        <label for="user">Пользователь:</label>
+        <select id="user" th:field="*{user.id}">
+            <option value="" disabled selected>Выберите пользователя</option>
+            <option th:each="user : ${users}"
+                    th:value="${user.id}"
+                    th:text="${user.name}">Пользователь</option>
+        </select>
+        <span th:if="${#fields.hasErrors('user')}" th:errors="*{user}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/orders}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>

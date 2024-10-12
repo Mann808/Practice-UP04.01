@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Поставки</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Поставки</h1>
+<a th:href="@{/shipments/new}">Создать Новую Поставку</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Метод Поставки</th>
+        <th>Дата Поставки</th>
+        <th>Заказ</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="shipment : ${shipments}">
+        <td th:text="${shipment.id}">1</td>
+        <td th:text="${shipment.shipmentMethod}">Метод Поставки</td>
+        <td th:text="${#temporals.format(shipment.shipmentDate, 'yyyy-MM-dd HH:mm')}">Дата Поставки</td>
+        <td th:text="'Заказ #' + ${shipment.order.id}">Заказ</td>
+        <td>
+            <a th:href="@{/shipments/{id}(id=${shipment.id})}">Просмотр</a> |
+            <a th:href="@{/shipments/edit/{id}(id=${shipment.id})}">Редактировать</a> |
+            <a th:href="@{/shipments/delete/{id}(id=${shipment.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить эту поставку?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Продукта</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Продукта</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${product.id}">1</span></p>
+    <p><strong>Название:</strong> <span th:text="${product.name}">Название</span></p>
+    <p><strong>Описание:</strong> <span th:text="${product.description}">Описание</span></p>
+    <p><strong>Цена:</strong> <span th:text="${product.price}">100.00</span></p>
+    <p><strong>Категория:</strong> <span th:text="${product.category.name}">Категория</span></p>
+    <p><strong>Поставщик:</strong> <span th:text="${product.supplier.name}">Поставщик</span></p>
+</div>
+<div>
+    <a th:href="@{/products/edit/{id}(id=${product.id})}">Редактировать</a> |
+    <a th:href="@{/products}">Назад к списку</a>
+</div>
+</body>
+</html>

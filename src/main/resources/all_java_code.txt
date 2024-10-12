@@ -1,0 +1,1607 @@
+----- .\templates\error.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Ошибка</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+    <style>
+        /* Дополнительные стили */
+        .error-container {
+            text-align: center;
+            padding: 50px;
+        }
+        .error-code {
+            font-size: 100px;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .error-message {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+        .error-details {
+            margin-top: 10px;
+            color: #6c757d;
+        }
+        .home-link {
+            margin-top: 30px;
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .home-link:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="error-container">
+    <div class="error-code" th:text="${status}">500</div>
+    <div class="error-message" th:text="${error}">Внутренняя ошибка сервера</div>
+    <div class="error-details" th:text="${message}">Что-то пошло не так.</div>
+    <a th:href="@{/}" class="home-link">Вернуться на Главную</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\home.html -----
+<!-- src/main/resources/templates/home.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Главная</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<div class="container">
+    <h1>Добро пожаловать в Онлайн Магазин</h1>
+    <p>Это главная страница вашего приложения.</p>
+</div>
+</body>
+</html>
+
+
+----- .\templates\addresses\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Адрес</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Адрес</h1>
+<form th:action="@{/addresses}" th:object="${address}" method="post">
+    <div>
+        <label for="street">Улица:</label>
+        <input type="text" id="street" th:field="*{street}" />
+        <span th:if="${#fields.hasErrors('street')}" th:errors="*{street}"></span>
+    </div>
+    <div>
+        <label for="city">Город:</label>
+        <input type="text" id="city" th:field="*{city}" />
+        <span th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></span>
+    </div>
+    <div>
+        <label for="state">Штат:</label>
+        <input type="text" id="state" th:field="*{state}" />
+        <span th:if="${#fields.hasErrors('state')}" th:errors="*{state}"></span>
+    </div>
+    <div>
+        <label for="postalCode">Почтовый Код:</label>
+        <input type="text" id="postalCode" th:field="*{postalCode}" />
+        <span th:if="${#fields.hasErrors('postalCode')}" th:errors="*{postalCode}"></span>
+    </div>
+    <div>
+        <label for="country">Страна:</label>
+        <input type="text" id="country" th:field="*{country}" />
+        <span th:if="${#fields.hasErrors('country')}" th:errors="*{country}"></span>
+    </div>
+    <div>
+        <label for="user">Пользователь:</label>
+        <select id="user" th:field="*{user.id}">
+            <option value="" disabled selected>Выберите пользователя</option>
+            <option th:each="user : ${users}"
+                    th:value="${user.id}"
+                    th:text="${user.name}">Пользователь</option>
+        </select>
+        <span th:if="${#fields.hasErrors('user')}" th:errors="*{user}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/addresses}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\addresses\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Редактировать Адрес</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Адрес</h1>
+<form th:action="@{/addresses/update/{id}(id=${address.id})}" th:object="${address}" method="post">
+  <div>
+    <label for="street">Улица:</label>
+    <input type="text" id="street" th:field="*{street}" />
+    <span th:if="${#fields.hasErrors('street')}" th:errors="*{street}"></span>
+  </div>
+  <div>
+    <label for="city">Город:</label>
+    <input type="text" id="city" th:field="*{city}" />
+    <span th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></span>
+  </div>
+  <div>
+    <label for="state">Штат:</label>
+    <input type="text" id="state" th:field="*{state}" />
+    <span th:if="${#fields.hasErrors('state')}" th:errors="*{state}"></span>
+  </div>
+  <div>
+    <label for="postalCode">Почтовый Код:</label>
+    <input type="text" id="postalCode" th:field="*{postalCode}" />
+    <span th:if="${#fields.hasErrors('postalCode')}" th:errors="*{postalCode}"></span>
+  </div>
+  <div>
+    <label for="country">Страна:</label>
+    <input type="text" id="country" th:field="*{country}" />
+    <span th:if="${#fields.hasErrors('country')}" th:errors="*{country}"></span>
+  </div>
+  <div>
+    <label for="user">Пользователь:</label>
+    <select id="user" th:field="*{user.id}">
+      <option value="" disabled>Выберите пользователя</option>
+      <option th:each="user : ${users}"
+              th:value="${user.id}"
+              th:text="${user.name}"
+              th:selected="${user.id} == ${address.user.id}">Пользователь</option>
+    </select>
+    <span th:if="${#fields.hasErrors('user')}" th:errors="*{user}"></span>
+  </div>
+  <div>
+    <button type="submit">Обновить</button>
+    <a th:href="@{/addresses}">Отмена</a>
+  </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\addresses\list.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Адреса</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Адреса</h1>
+<a th:href="@{/addresses/new}">Создать Новый Адрес</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Улица</th>
+        <th>Город</th>
+        <th>Штат</th>
+        <th>Почтовый Код</th>
+        <th>Страна</th>
+        <th>Пользователь</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="address : ${addresses}">
+        <td th:text="${address.id}">1</td>
+        <td th:text="${address.street}">Улица</td>
+        <td th:text="${address.city}">Город</td>
+        <td th:text="${address.state}">Штат</td>
+        <td th:text="${address.postalCode}">Почтовый Код</td>
+        <td th:text="${address.country}">Страна</td>
+        <td th:text="${address.user != null ? address.user.name : 'Не назначен'}">Пользователь</td>
+        <td>
+            <a th:href="@{/addresses/{id}(id=${address.id})}">Просмотр</a> |
+            <a th:href="@{/addresses/edit/{id}(id=${address.id})}">Редактировать</a> |
+            <a th:href="@{/addresses/delete/{id}(id=${address.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить этот адрес?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\addresses\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Адреса</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Адреса</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${address.id}">1</span></p>
+    <p><strong>Улица:</strong> <span th:text="${address.street}">Улица</span></p>
+    <p><strong>Город:</strong> <span th:text="${address.city}">Город</span></p>
+    <p><strong>Штат:</strong> <span th:text="${address.state}">Штат</span></p>
+    <p><strong>Почтовый Код:</strong> <span th:text="${address.postalCode}">Почтовый Код</span></p>
+    <p><strong>Страна:</strong> <span th:text="${address.country}">Страна</span></p>
+    <p><strong>Пользователь:</strong> <span th:text="${address.user.name}">Пользователь</span></p>
+</div>
+<div>
+    <a th:href="@{/addresses/edit/{id}(id=${address.id})}">Редактировать</a> |
+    <a th:href="@{/addresses}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\auth\login.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Вход</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<div class="container">
+    <h1>Вход</h1>
+    <form th:action="@{/login}" method="post">
+        <div class="form-group">
+            <label for="username">Email:</label>
+            <input type="email" id="username" name="username" required />
+        </div>
+        <div class="form-group">
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" name="password" required />
+        </div>
+        <div class="form-group">
+            <button type="submit">Войти</button>
+        </div>
+        <div th:if="${param.error}">
+            <span class="error">Неверный email или пароль.</span>
+        </div>
+        <div th:if="${param.logout}">
+            <span class="success">Вы успешно вышли из системы.</span>
+        </div>
+        <div th:if="${param.registerSuccess}">
+            <span class="success">Регистрация прошла успешно. Войдите в систему.</span>
+        </div>
+    </form>
+    <p>Нет аккаунта? <a th:href="@{/register}">Зарегистрироваться</a></p>
+</div>
+</body>
+</html>
+
+
+----- .\templates\auth\register.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Регистрация</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<div class="container">
+    <h1>Регистрация</h1>
+    <form th:action="@{/register}" th:object="${user}" method="post">
+        <div class="form-group">
+            <label for="name">Имя:</label>
+            <input type="text" id="name" th:field="*{name}" />
+            <span class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" th:field="*{email}" />
+            <span class="error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+        </div>
+        <div class="form-group">
+            <label for="password">Пароль:</label>
+            <input type="password" id="password" th:field="*{password}" />
+            <span class="error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+        </div>
+        <div class="form-group">
+            <label for="role">Роль:</label>
+            <select id="role" name="role">
+                <option value="" disabled selected>Выберите роль</option>
+                <option th:each="role : ${roles}"
+                        th:value="${role.name}"
+                        th:text="${role.name}"></option>
+            </select>
+            <span class="error" th:if="${#fields.hasErrors('roles')}" th:errors="*{roles}"></span>
+        </div>
+        <div class="form-group">
+            <button type="submit">Зарегистрироваться</button>
+        </div>
+    </form>
+    <p>Уже есть аккаунт? <a th:href="@{/login}">Войти</a></p>
+</div>
+</body>
+</html>
+
+
+----- .\templates\categories\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Категорию</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Категорию</h1>
+<form th:action="@{/categories}" th:object="${category}" method="post">
+    <div>
+        <label for="name">Название:</label>
+        <input type="text" id="name" th:field="*{name}" />
+        <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/categories}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\categories\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Редактировать Категорию</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Категорию</h1>
+<form th:action="@{/categories/update/{id}(id=${category.id})}" th:object="${category}" method="post">
+  <div>
+    <label for="name">Название:</label>
+    <input type="text" id="name" th:field="*{name}" />
+    <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+  </div>
+  <div>
+    <button type="submit">Обновить</button>
+    <a th:href="@{/categories}">Отмена</a>
+  </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\categories\list.html -----
+<!-- src/main/resources/templates/categories/list.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Категории</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Категории</h1>
+<a th:href="@{/categories/new}">Создать Новую Категорию</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Название</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="category : ${categories}">
+        <td th:text="${category.id}">1</td>
+        <td th:text="${category.name}">Название</td>
+        <td>
+            <a th:href="@{/categories/{id}(id=${category.id})}">Просмотр</a> |
+            <a th:href="@{/categories/edit/{id}(id=${category.id})}">Редактировать</a> |
+            <a th:href="@{/categories/delete/{id}(id=${category.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить эту категорию?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\categories\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Категории</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Категории</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${category.id}">1</span></p>
+    <p><strong>Название:</strong> <span th:text="${category.name}">Название</span></p>
+</div>
+<div>
+    <a th:href="@{/categories/edit/{id}(id=${category.id})}">Редактировать</a> |
+    <a th:href="@{/categories}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\fragments\navbar.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Навигационная панель</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<nav>
+    <ul>
+        <li><a th:href="@{/}">Главная</a></li>
+        <li><a th:href="@{/products}">Продукты</a></li>
+        <li><a th:href="@{/orders}">Заказы</a></li>
+        <li th:if="${#authorization.expression('hasRole(''ADMIN'')')}"><a th:href="@{/admin/dashboard}">Админка</a></li>
+        <li th:if="${#authorization.expression('hasRole(''MANAGER'')')}"><a th:href="@{/manager/dashboard}">Менеджер</a></li>
+        <li th:if="${#authorization.expression('isAuthenticated()')}">
+            Привет, <span th:text="${#authentication.name}">User</span>!
+            <a th:href="@{/logout}">Выйти</a>
+        </li>
+        <li th:if="${#authorization.expression('!isAuthenticated()')}">
+            <a th:href="@{/login}">Войти</a>
+            <a th:href="@{/register}">Регистрация</a>
+        </li>
+    </ul>
+</nav>
+<div th:replace="~{::body}"></div>
+</body>
+</html>
+
+
+----- .\templates\orderitems\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Элемент Заказа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Элемент Заказа</h1>
+<form th:action="@{/order-items}" th:object="${orderItem}" method="post">
+    <div>
+        <label for="order">Заказ:</label>
+        <select id="order" th:field="*{order.id}">
+            <option value="" disabled selected>Выберите заказ</option>
+            <option th:each="order : ${orders}"
+                    th:value="${order.id}"
+                    th:text="'Заказ #' + ${order.id}">Заказ</option>
+        </select>
+        <span th:if="${#fields.hasErrors('order')}" th:errors="*{order}"></span>
+    </div>
+    <div>
+        <label for="product">Продукт:</label>
+        <select id="product" th:field="*{product.id}">
+            <option value="" disabled selected>Выберите продукт</option>
+            <option th:each="product : ${products}"
+                    th:value="${product.id}"
+                    th:text="${product.name}">Продукт</option>
+        </select>
+        <span th:if="${#fields.hasErrors('product')}" th:errors="*{product}"></span>
+    </div>
+    <div>
+        <label for="quantity">Количество:</label>
+        <input type="number" id="quantity" th:field="*{quantity}" min="1" />
+        <span th:if="${#fields.hasErrors('quantity')}" th:errors="*{quantity}"></span>
+    </div>
+    <div>
+        <label for="unitPrice">Цена за Единицу:</label>
+        <input type="number" step="0.01" id="unitPrice" th:field="*{unitPrice}" min="0.01" />
+        <span th:if="${#fields.hasErrors('unitPrice')}" th:errors="*{unitPrice}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/order-items}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\orderitems\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Редактировать Элемент Заказа</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Элемент Заказа</h1>
+<form th:action="@{/order-items/update/{id}(id=${orderItem.id})}" th:object="${orderItem}" method="post">
+  <div>
+    <label for="order">Заказ:</label>
+    <select id="order" th:field="*{order.id}">
+      <option value="" disabled>Выберите заказ</option>
+      <option th:each="order : ${orders}"
+              th:value="${order.id}"
+              th:text="'Заказ #' + ${order.id}"
+              th:selected="${order.id} == ${orderItem.order.id}">Заказ</option>
+    </select>
+    <span th:if="${#fields.hasErrors('order')}" th:errors="*{order}"></span>
+  </div>
+  <div>
+    <label for="product">Продукт:</label>
+    <select id="product" th:field="*{product.id}">
+      <option value="" disabled>Выберите продукт</option>
+      <option th:each="product : ${products}"
+              th:value="${product.id}"
+              th:text="${product.name}"
+              th:selected="${product.id} == ${orderItem.product.id}">Продукт</option>
+    </select>
+    <span th:if="${#fields.hasErrors('product')}" th:errors="*{product}"></span>
+  </div>
+  <div>
+    <label for="quantity">Количество:</label>
+    <input type="number" id="quantity" th:field="*{quantity}" min="1" />
+    <span th:if="${#fields.hasErrors('quantity')}" th:errors="*{quantity}"></span>
+  </div>
+  <div>
+    <label for="unitPrice">Цена за Единицу:</label>
+    <input type="number" step="0.01" id="unitPrice" th:field="*{unitPrice}" min="0.01" />
+    <span th:if="${#fields.hasErrors('unitPrice')}" th:errors="*{unitPrice}"></span>
+  </div>
+  <div>
+    <button type="submit">Обновить</button>
+    <a th:href="@{/order-items}">Отмена</a>
+  </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\orderitems\list.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Элементы Заказа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Элементы Заказа</h1>
+<a th:href="@{/order-items/new}">Создать Новый Элемент Заказа</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Заказ</th>
+        <th>Продукт</th>
+        <th>Количество</th>
+        <th>Цена за Единицу</th>
+        <th>Общая Цена</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="orderItem : ${orderItems}">
+        <td th:text="${orderItem.id}">1</td>
+        <td th:text="${orderItem.order.id}">Заказ ID</td>
+        <td th:text="${orderItem.product.name}">Продукт</td>
+        <td th:text="${orderItem.quantity}">Количество</td>
+        <td th:text="${orderItem.unitPrice}">Цена за Единицу</td>
+        <td th:text="${orderItem.unitPrice.multiply(orderItem.quantity)}">Общая Цена</td>
+        <td>
+            <a th:href="@{/order-items/{id}(id=${orderItem.id})}">Просмотр</a> |
+            <a th:href="@{/order-items/edit/{id}(id=${orderItem.id})}">Редактировать</a> |
+            <a th:href="@{/order-items/delete/{id}(id=${orderItem.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить этот элемент заказа?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\orderitems\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Элемента Заказа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Элемента Заказа</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${orderItem.id}">1</span></p>
+    <p><strong>Заказ:</strong> <span th:text="'Заказ #' + ${orderItem.order.id}">Заказ</span></p>
+    <p><strong>Продукт:</strong> <span th:text="${orderItem.product.name}">Продукт</span></p>
+    <p><strong>Количество:</strong> <span th:text="${orderItem.quantity}">Количество</span></p>
+    <p><strong>Цена за Единицу:</strong> <span th:text="${orderItem.unitPrice}">Цена за Единицу</span></p>
+    <p><strong>Общая Цена:</strong> <span th:text="${orderItem.unitPrice.multiply(orderItem.quantity)}">Общая Цена</span></p>
+</div>
+<div>
+    <a th:href="@{/order-items/edit/{id}(id=${orderItem.id})}">Редактировать</a> |
+    <a th:href="@{/order-items}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\orders\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Заказ</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Заказ</h1>
+<form th:action="@{/orders}" th:object="${order}" method="post">
+    <div>
+        <label for="orderDate">Дата Заказа:</label>
+        <input type="datetime-local" id="orderDate" th:field="*{orderDate}" />
+        <span th:if="${#fields.hasErrors('orderDate')}" th:errors="*{orderDate}"></span>
+    </div>
+    <div>
+        <label for="user">Пользователь:</label>
+        <select id="user" th:field="*{user.id}">
+            <option value="" disabled selected>Выберите пользователя</option>
+            <option th:each="user : ${users}"
+                    th:value="${user.id}"
+                    th:text="${user.name}">Пользователь</option>
+        </select>
+        <span th:if="${#fields.hasErrors('user')}" th:errors="*{user}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/orders}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\orders\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Редактировать Заказ</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Заказ</h1>
+<form th:action="@{/orders/update/{id}(id=${order.id})}" th:object="${order}" method="post">
+  <div>
+    <label for="orderDate">Дата Заказа:</label>
+    <input type="datetime-local" id="orderDate" th:field="*{orderDate}" />
+    <span th:if="${#fields.hasErrors('orderDate')}" th:errors="*{orderDate}"></span>
+  </div>
+  <div>
+    <label for="user">Пользователь:</label>
+    <select id="user" th:field="*{user.id}">
+      <option value="" disabled>Выберите пользователя</option>
+      <option th:each="user : ${users}"
+              th:value="${user.id}"
+              th:text="${user.name}"
+              th:selected="${user.id} == ${order.user.id}">Пользователь</option>
+    </select>
+    <span th:if="${#fields.hasErrors('user')}" th:errors="*{user}"></span>
+  </div>
+  <div>
+    <button type="submit">Обновить</button>
+    <a th:href="@{/orders}">Отмена</a>
+  </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\orders\list.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Заказы</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Заказы</h1>
+<a th:href="@{/orders/new}">Создать Новый Заказ</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Дата Заказа</th>
+        <th>Пользователь</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="order : ${orders}">
+        <td th:text="${order.id}">1</td>
+        <td th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2024-01-01 12:00</td>
+        <td th:text="${order.user.name}">Пользователь</td>
+        <td>
+            <a th:href="@{/orders/{id}(id=${order.id})}">Просмотр</a> |
+            <a th:href="@{/orders/edit/{id}(id=${order.id})}">Редактировать</a> |
+            <a th:href="@{/orders/delete/{id}(id=${order.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить этот заказ?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\orders\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Заказа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Заказа</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${order.id}">1</span></p>
+    <p><strong>Дата Заказа:</strong> <span th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2024-01-01 12:00</span></p>
+    <p><strong>Пользователь:</strong> <span th:text="${order.user.name}">Пользователь</span></p>
+</div>
+<div>
+    <a th:href="@{/orders/edit/{id}(id=${order.id})}">Редактировать</a> |
+    <a th:href="@{/orders}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\payments\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Платеж</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Платеж</h1>
+<form th:action="@{/payments}" th:object="${payment}" method="post">
+    <div>
+        <label for="paymentMethod">Метод Платежа:</label>
+        <input type="text" id="paymentMethod" th:field="*{paymentMethod}" />
+        <span th:if="${#fields.hasErrors('paymentMethod')}" th:errors="*{paymentMethod}"></span>
+    </div>
+    <div>
+        <label for="paymentDate">Дата Платежа:</label>
+        <input type="datetime-local" id="paymentDate" th:field="*{paymentDate}" />
+        <span th:if="${#fields.hasErrors('paymentDate')}" th:errors="*{paymentDate}"></span>
+    </div>
+    <div>
+        <label for="amount">Сумма:</label>
+        <input type="number" step="0.01" id="amount" th:field="*{amount}" min="0.01" />
+        <span th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></span>
+    </div>
+    <div>
+        <label for="order">Заказ:</label>
+        <select id="order" th:field="*{order.id}">
+            <option value="" disabled selected>Выберите заказ</option>
+            <option th:each="order : ${orders}"
+                    th:value="${order.id}"
+                    th:text="'Заказ #' + ${order.id}">Заказ</option>
+        </select>
+        <span th:if="${#fields.hasErrors('order')}" th:errors="*{order}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/payments}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\payments\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Редактировать Платеж</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Платеж</h1>
+<form th:action="@{/payments/update/{id}(id=${payment.id})}" th:object="${payment}" method="post">
+  <div>
+    <label for="paymentMethod">Метод Платежа:</label>
+    <input type="text" id="paymentMethod" th:field="*{paymentMethod}" />
+    <span th:if="${#fields.hasErrors('paymentMethod')}" th:errors="*{paymentMethod}"></span>
+  </div>
+  <div>
+    <label for="paymentDate">Дата Платежа:</label>
+    <input type="datetime-local" id="paymentDate" th:field="*{paymentDate}" />
+    <span th:if="${#fields.hasErrors('paymentDate')}" th:errors="*{paymentDate}"></span>
+  </div>
+  <div>
+    <label for="amount">Сумма:</label>
+    <input type="number" step="0.01" id="amount" th:field="*{amount}" min="0.01" />
+    <span th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></span>
+  </div>
+  <div>
+    <label for="order">Заказ:</label>
+    <select id="order" th:field="*{order.id}">
+      <option value="" disabled>Выберите заказ</option>
+      <option th:each="order : ${orders}"
+              th:value="${order.id}"
+              th:text="'Заказ #' + ${order.id}"
+              th:selected="${order.id} == ${payment.order.id}">Заказ</option>
+    </select>
+    <span th:if="${#fields.hasErrors('order')}" th:errors="*{order}"></span>
+  </div>
+  <div>
+    <button type="submit">Обновить</button>
+    <a th:href="@{/payments}">Отмена</a>
+  </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\payments\list.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Платежи</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Платежи</h1>
+<a th:href="@{/payments/new}">Создать Новый Платеж</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Метод Платежа</th>
+        <th>Дата Платежа</th>
+        <th>Сумма</th>
+        <th>Заказ</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="payment : ${payments}">
+        <td th:text="${payment.id}">1</td>
+        <td th:text="${payment.paymentMethod}">Метод Платежа</td>
+        <td th:text="${#temporals.format(payment.paymentDate, 'yyyy-MM-dd HH:mm')}">Дата Платежа</td>
+        <td th:text="${payment.amount}">Сумма</td>
+        <td th:text="'Заказ #' + ${payment.order.id}">Заказ</td>
+        <td>
+            <a th:href="@{/payments/{id}(id=${payment.id})}">Просмотр</a> |
+            <a th:href="@{/payments/edit/{id}(id=${payment.id})}">Редактировать</a> |
+            <a th:href="@{/payments/delete/{id}(id=${payment.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить этот платеж?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\payments\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Платежа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Платежа</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${payment.id}">1</span></p>
+    <p><strong>Метод Платежа:</strong> <span th:text="${payment.paymentMethod}">Метод Платежа</span></p>
+    <p><strong>Дата Платежа:</strong> <span th:text="${#temporals.format(payment.paymentDate, 'yyyy-MM-dd HH:mm')}">Дата Платежа</span></p>
+    <p><strong>Сумма:</strong> <span th:text="${payment.amount}">Сумма</span></p>
+    <p><strong>Заказ:</strong> <span th:text="'Заказ #' + ${payment.order.id}">Заказ</span></p>
+</div>
+<div>
+    <a th:href="@{/payments/edit/{id}(id=${payment.id})}">Редактировать</a> |
+    <a th:href="@{/payments}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\products\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Продукт</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Продукт</h1>
+<form th:action="@{/products}" th:object="${product}" method="post">
+    <div>
+        <label for="name">Название:</label>
+        <input type="text" id="name" th:field="*{name}" />
+        <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+    </div>
+    <div>
+        <label for="description">Описание:</label>
+        <textarea id="description" th:field="*{description}"></textarea>
+        <span th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+    </div>
+    <div>
+        <label for="price">Цена:</label>
+        <input type="number" step="0.01" id="price" th:field="*{price}" />
+        <span th:if="${#fields.hasErrors('price')}" th:errors="*{price}"></span>
+    </div>
+    <div>
+        <label for="category">Категория:</label>
+        <select id="category" th:field="*{category.id}">
+            <option value="" disabled selected>Выберите категорию</option>
+            <option th:each="category : ${categories}"
+                    th:value="${category.id}"
+                    th:text="${category.name}">Категория</option>
+        </select>
+        <span th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></span>
+    </div>
+    <div>
+        <label for="supplier">Поставщик:</label>
+        <select id="supplier" th:field="*{supplier.id}">
+            <option value="" disabled selected>Выберите поставщика</option>
+            <option th:each="supplier : ${suppliers}"
+                    th:value="${supplier.id}"
+                    th:text="${supplier.name}">Поставщик</option>
+        </select>
+        <span th:if="${#fields.hasErrors('supplier')}" th:errors="*{supplier}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/products}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\products\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Редактировать Продукт</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Продукт</h1>
+<form th:action="@{/products/update/{id}(id=${product.id})}" th:object="${product}" method="post">
+    <div>
+        <label for="name">Название:</label>
+        <input type="text" id="name" th:field="*{name}" />
+        <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+    </div>
+    <div>
+        <label for="description">Описание:</label>
+        <textarea id="description" th:field="*{description}"></textarea>
+        <span th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+    </div>
+    <div>
+        <label for="price">Цена:</label>
+        <input type="number" step="0.01" id="price" th:field="*{price}" />
+        <span th:if="${#fields.hasErrors('price')}" th:errors="*{price}"></span>
+    </div>
+    <div>
+        <label for="category">Категория:</label>
+        <select id="category" th:field="*{category.id}">
+            <option value="" disabled>Выберите категорию</option>
+            <option th:each="category : ${categories}"
+                    th:value="${category.id}"
+                    th:text="${category.name}"
+                    th:selected="${category.id} == ${product.category.id}">Категория</option>
+        </select>
+        <span th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></span>
+    </div>
+    <div>
+        <label for="supplier">Поставщик:</label>
+        <select id="supplier" th:field="*{supplier.id}">
+            <option value="" disabled>Выберите поставщика</option>
+            <option th:each="supplier : ${suppliers}"
+                    th:value="${supplier.id}"
+                    th:text="${supplier.name}"
+                    th:selected="${supplier.id} == ${product.supplier.id}">Поставщик</option>
+        </select>
+        <span th:if="${#fields.hasErrors('supplier')}" th:errors="*{supplier}"></span>
+    </div>
+    <div>
+        <button type="submit">Обновить</button>
+        <a th:href="@{/products}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\products\list.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Продукты</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Продукты</h1>
+<a th:href="@{/products/new}">Создать Новый Продукт</a>
+<table border="1">
+  <thead>
+  <tr>
+    <th>ID</th>
+    <th>Название</th>
+    <th>Описание</th>
+    <th>Цена</th>
+    <th>Категория</th>
+    <th>Поставщик</th>
+    <th>Действия</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr th:each="product : ${products}">
+    <td th:text="${product.id}">1</td>
+    <td th:text="${product.name}">Название</td>
+    <td th:text="${product.description}">Описание</td>
+    <td th:text="${product.price}">100.00</td>
+    <td th:text="${product.category.name}">Категория</td>
+    <td th:text="${product.supplier.name}">Поставщик</td>
+    <td>
+      <a th:href="@{/products/{id}(id=${product.id})}">Просмотр</a> |
+      <a th:href="@{/products/edit/{id}(id=${product.id})}">Редактировать</a> |
+      <a th:href="@{/products/delete/{id}(id=${product.id})}"
+         onclick="return confirm('Вы уверены, что хотите удалить этот продукт?');">Удалить</a>
+    </td>
+  </tr>
+  </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\products\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Продукта</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Продукта</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${product.id}">1</span></p>
+    <p><strong>Название:</strong> <span th:text="${product.name}">Название</span></p>
+    <p><strong>Описание:</strong> <span th:text="${product.description}">Описание</span></p>
+    <p><strong>Цена:</strong> <span th:text="${product.price}">100.00</span></p>
+    <p><strong>Категория:</strong> <span th:text="${product.category.name}">Категория</span></p>
+    <p><strong>Поставщик:</strong> <span th:text="${product.supplier.name}">Поставщик</span></p>
+</div>
+<div>
+    <a th:href="@{/products/edit/{id}(id=${product.id})}">Редактировать</a> |
+    <a th:href="@{/products}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\shipments\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Поставку</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Поставку</h1>
+<form th:action="@{/shipments}" th:object="${shipment}" method="post">
+    <div>
+        <label for="shipmentMethod">Метод Поставки:</label>
+        <input type="text" id="shipmentMethod" th:field="*{shipmentMethod}" />
+        <span th:if="${#fields.hasErrors('shipmentMethod')}" th:errors="*{shipmentMethod}"></span>
+    </div>
+    <div>
+        <label for="shipmentDate">Дата Поставки:</label>
+        <input type="datetime-local" id="shipmentDate" th:field="*{shipmentDate}" />
+        <span th:if="${#fields.hasErrors('shipmentDate')}" th:errors="*{shipmentDate}"></span>
+    </div>
+    <div>
+        <label for="order">Заказ:</label>
+        <select id="order" th:field="*{order.id}">
+            <option value="" disabled selected>Выберите заказ</option>
+            <option th:each="order : ${orders}"
+                    th:value="${order.id}"
+                    th:text="'Заказ #' + ${order.id}">Заказ</option>
+        </select>
+        <span th:if="${#fields.hasErrors('order')}" th:errors="*{order}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/shipments}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\shipments\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Редактировать Поставку</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Поставку</h1>
+<form th:action="@{/shipments/update/{id}(id=${shipment.id})}" th:object="${shipment}" method="post">
+  <div>
+    <label for="shipmentMethod">Метод Поставки:</label>
+    <input type="text" id="shipmentMethod" th:field="*{shipmentMethod}" />
+    <span th:if="${#fields.hasErrors('shipmentMethod')}" th:errors="*{shipmentMethod}"></span>
+  </div>
+  <div>
+    <label for="shipmentDate">Дата Поставки:</label>
+    <input type="datetime-local" id="shipmentDate" th:field="*{shipmentDate}" />
+    <span th:if="${#fields.hasErrors('shipmentDate')}" th:errors="*{shipmentDate}"></span>
+  </div>
+  <div>
+    <label for="order">Заказ:</label>
+    <select id="order" th:field="*{order.id}">
+      <option value="" disabled>Выберите заказ</option>
+      <option th:each="order : ${orders}"
+              th:value="${order.id}"
+              th:text="'Заказ #' + ${order.id}"
+              th:selected="${order.id} == ${shipment.order.id}">Заказ</option>
+    </select>
+    <span th:if="${#fields.hasErrors('order')}" th:errors="*{order}"></span>
+  </div>
+  <div>
+    <button type="submit">Обновить</button>
+    <a th:href="@{/shipments}">Отмена</a>
+  </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\shipments\list.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Поставки</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Поставки</h1>
+<a th:href="@{/shipments/new}">Создать Новую Поставку</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Метод Поставки</th>
+        <th>Дата Поставки</th>
+        <th>Заказ</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="shipment : ${shipments}">
+        <td th:text="${shipment.id}">1</td>
+        <td th:text="${shipment.shipmentMethod}">Метод Поставки</td>
+        <td th:text="${#temporals.format(shipment.shipmentDate, 'yyyy-MM-dd HH:mm')}">Дата Поставки</td>
+        <td th:text="'Заказ #' + ${shipment.order.id}">Заказ</td>
+        <td>
+            <a th:href="@{/shipments/{id}(id=${shipment.id})}">Просмотр</a> |
+            <a th:href="@{/shipments/edit/{id}(id=${shipment.id})}">Редактировать</a> |
+            <a th:href="@{/shipments/delete/{id}(id=${shipment.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить эту поставку?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\shipments\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Поставки</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Поставки</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${shipment.id}">1</span></p>
+    <p><strong>Метод Поставки:</strong> <span th:text="${shipment.shipmentMethod}">Метод Поставки</span></p>
+    <p><strong>Дата Поставки:</strong> <span th:text="${#temporals.format(shipment.shipmentDate, 'yyyy-MM-dd HH:mm')}">Дата Поставки</span></p>
+    <p><strong>Заказ:</strong> <span th:text="'Заказ #' + ${shipment.order.id}">Заказ</span></p>
+</div>
+<div>
+    <a th:href="@{/shipments/edit/{id}(id=${shipment.id})}">Редактировать</a> |
+    <a th:href="@{/shipments}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\suppliers\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Поставщика</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Поставщика</h1>
+<form th:action="@{/suppliers}" th:object="${supplier}" method="post">
+    <div>
+        <label for="name">Название:</label>
+        <input type="text" id="name" th:field="*{name}" />
+        <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+    </div>
+    <div>
+        <label for="contactEmail">Email Контакта:</label>
+        <input type="email" id="contactEmail" th:field="*{contactEmail}" />
+        <span th:if="${#fields.hasErrors('contactEmail')}" th:errors="*{contactEmail}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/suppliers}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\suppliers\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Редактировать Поставщика</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Поставщика</h1>
+<form th:action="@{/suppliers/update/{id}(id=${supplier.id})}" th:object="${supplier}" method="post">
+  <div>
+    <label for="name">Название:</label>
+    <input type="text" id="name" th:field="*{name}" />
+    <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+  </div>
+  <div>
+    <label for="contactEmail">Email Контакта:</label>
+    <input type="email" id="contactEmail" th:field="*{contactEmail}" />
+    <span th:if="${#fields.hasErrors('contactEmail')}" th:errors="*{contactEmail}"></span>
+  </div>
+  <div>
+    <button type="submit">Обновить</button>
+    <a th:href="@{/suppliers}">Отмена</a>
+  </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\suppliers\list.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Поставщики</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Поставщики</h1>
+<a th:href="@{/suppliers/new}">Создать Нового Поставщика</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Название</th>
+        <th>Email Контакта</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="supplier : ${suppliers}">
+        <td th:text="${supplier.id}">1</td>
+        <td th:text="${supplier.name}">Название</td>
+        <td th:text="${supplier.contactEmail}">email@example.com</td>
+        <td>
+            <a th:href="@{/suppliers/{id}(id=${supplier.id})}">Просмотр</a> |
+            <a th:href="@{/suppliers/edit/{id}(id=${supplier.id})}">Редактировать</a> |
+            <a th:href="@{/suppliers/delete/{id}(id=${supplier.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить этого поставщика?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\suppliers\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Поставщика</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Поставщика</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${supplier.id}">1</span></p>
+    <p><strong>Название:</strong> <span th:text="${supplier.name}">Название</span></p>
+    <p><strong>Email Контакта:</strong> <span th:text="${supplier.contactEmail}">email@example.com</span></p>
+</div>
+<div>
+    <a th:href="@{/suppliers/edit/{id}(id=${supplier.id})}">Редактировать</a> |
+    <a th:href="@{/suppliers}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+
+----- .\templates\users\create.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Пользователя</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Пользователя</h1>
+<form th:action="@{/users}" th:object="${user}" method="post">
+    <div>
+        <label for="name">Имя:</label>
+        <input type="text" id="name" th:field="*{name}" />
+        <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+    </div>
+    <div>
+        <label for="email">Email:</label>
+        <input type="email" id="email" th:field="*{email}" />
+        <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+    </div>
+    <div>
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" th:field="*{password}" />
+        <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/users}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\users\edit.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Редактировать Пользователя</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Пользователя</h1>
+<form th:action="@{/users/update/{id}(id=${user.id})}" th:object="${user}" method="post">
+    <div>
+        <label for="name">Имя:</label>
+        <input type="text" id="name" th:field="*{name}" />
+        <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+    </div>
+    <div>
+        <label for="email">Email:</label>
+        <input type="email" id="email" th:field="*{email}" />
+        <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+    </div>
+    <div>
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" th:field="*{password}" />
+        <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+    </div>
+    <div>
+        <button type="submit">Обновить</button>
+        <a th:href="@{/users}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
+
+
+----- .\templates\users\list.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Пользователи</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Пользователи</h1>
+<a th:href="@{/users/new}">Создать Нового Пользователя</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Имя</th>
+        <th>Email</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="user : ${users}">
+        <td th:text="${user.id}">1</td>
+        <td th:text="${user.name}">Имя</td>
+        <td th:text="${user.email}">email@example.com</td>
+        <td>
+            <a th:href="@{/users/{id}(id=${user.id})}">Просмотр</a> |
+            <a th:href="@{/users/edit/{id}(id=${user.id})}">Редактировать</a> |
+            <a th:href="@{/users/delete/{id}(id=${user.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить этого пользователя?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+----- .\templates\users\view.html -----
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Детали Пользователя</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Пользователя</h1>
+<div>
+  <p><strong>ID:</strong> <span th:text="${user.id}">1</span></p>
+  <p><strong>Имя:</strong> <span th:text="${user.name}">Имя</span></p>
+  <p><strong>Email:</strong> <span th:text="${user.email}">email@example.com</span></p>
+</div>
+<div>
+  <a th:href="@{/users/edit/{id}(id=${user.id})}">Редактировать</a> |
+  <a th:href="@{/users}">Назад к списку</a>
+</div>
+</body>
+</html>
+
+style.css:
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa;
+    margin: 20px;
+    padding: 0;
+    color: #333;
+}
+
+/* Стилизация заголовков */
+h1 {
+    color: #007bff;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Стилизация ссылок */
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Стилизация таблиц */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #fff;
+}
+
+table, th, td {
+    border: 1px solid #dee2e6;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #e9ecef;
+    font-weight: bold;
+}
+
+/* Стилизация форм */
+form {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+form div {
+    margin-bottom: 15px;
+}
+
+label {
+    display: inline-block;
+    width: 150px;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="datetime-local"],
+textarea,
+select {
+    width: calc(100% - 160px);
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+textarea {
+    resize: vertical;
+    height: 100px;
+}
+
+/* Стилизация кнопок */
+button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Стилизация ошибок валидации */
+span.error {
+    color: red;
+    font-size: 0.9em;
+    margin-left: 10px;
+}
+
+/* Стилизация ссылок для действий */
+td a {
+    margin-right: 10px;
+}
+
+/* Дополнительные стили для удобства */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.navbar {
+    margin-bottom: 20px;
+}
+
+.alert {
+    padding: 10px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}

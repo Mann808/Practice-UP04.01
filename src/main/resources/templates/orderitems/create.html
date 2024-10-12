@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Элемент Заказа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Элемент Заказа</h1>
+<form th:action="@{/order-items}" th:object="${orderItem}" method="post">
+    <div>
+        <label for="order">Заказ:</label>
+        <select id="order" th:field="*{order.id}">
+            <option value="" disabled selected>Выберите заказ</option>
+            <option th:each="order : ${orders}"
+                    th:value="${order.id}"
+                    th:text="'Заказ #' + ${order.id}">Заказ</option>
+        </select>
+        <span th:if="${#fields.hasErrors('order')}" th:errors="*{order}"></span>
+    </div>
+    <div>
+        <label for="product">Продукт:</label>
+        <select id="product" th:field="*{product.id}">
+            <option value="" disabled selected>Выберите продукт</option>
+            <option th:each="product : ${products}"
+                    th:value="${product.id}"
+                    th:text="${product.name}">Продукт</option>
+        </select>
+        <span th:if="${#fields.hasErrors('product')}" th:errors="*{product}"></span>
+    </div>
+    <div>
+        <label for="quantity">Количество:</label>
+        <input type="number" id="quantity" th:field="*{quantity}" min="1" />
+        <span th:if="${#fields.hasErrors('quantity')}" th:errors="*{quantity}"></span>
+    </div>
+    <div>
+        <label for="unitPrice">Цена за Единицу:</label>
+        <input type="number" step="0.01" id="unitPrice" th:field="*{unitPrice}" min="0.01" />
+        <span th:if="${#fields.hasErrors('unitPrice')}" th:errors="*{unitPrice}"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/order-items}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Редактировать Поставку</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Редактировать Поставку</h1>
+<form th:action="@{/shipments/update/{id}(id=${shipment.id})}" th:object="${shipment}" method="post">
+  <div>
+    <label for="shipmentMethod">Метод Поставки:</label>
+    <input type="text" id="shipmentMethod" th:field="*{shipmentMethod}" />
+    <span th:if="${#fields.hasErrors('shipmentMethod')}" th:errors="*{shipmentMethod}"></span>
+  </div>
+  <div>
+    <label for="shipmentDate">Дата Поставки:</label>
+    <input type="datetime-local" id="shipmentDate" th:field="*{shipmentDate}" />
+    <span th:if="${#fields.hasErrors('shipmentDate')}" th:errors="*{shipmentDate}"></span>
+  </div>
+  <div>
+    <label for="order">Заказ:</label>
+    <select id="order" th:field="*{order.id}">
+      <option value="" disabled>Выберите заказ</option>
+      <option th:each="order : ${orders}"
+              th:value="${order.id}"
+              th:text="'Заказ #' + ${order.id}"
+              th:selected="${order.id} == ${shipment.order.id}">Заказ</option>
+    </select>
+    <span th:if="${#fields.hasErrors('order')}" th:errors="*{order}"></span>
+  </div>
+  <div>
+    <button type="submit">Обновить</button>
+    <a th:href="@{/shipments}">Отмена</a>
+  </div>
+</form>
+</body>
+</html>

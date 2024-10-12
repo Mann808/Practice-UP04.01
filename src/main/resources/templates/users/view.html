@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Детали Пользователя</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Пользователя</h1>
+<div>
+  <p><strong>ID:</strong> <span th:text="${user.id}">1</span></p>
+  <p><strong>Имя:</strong> <span th:text="${user.name}">Имя</span></p>
+  <p><strong>Email:</strong> <span th:text="${user.email}">email@example.com</span></p>
+</div>
+<div>
+  <a th:href="@{/users/edit/{id}(id=${user.id})}">Редактировать</a> |
+  <a th:href="@{/users}">Назад к списку</a>
+</div>
+</body>
+</html>
