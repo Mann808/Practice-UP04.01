@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Адреса</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Адреса</h1>
+<a th:href="@{/addresses/new}">Создать Новый Адрес</a>
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Улица</th>
+        <th>Город</th>
+        <th>Штат</th>
+        <th>Почтовый Код</th>
+        <th>Страна</th>
+        <th>Пользователь</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="address : ${addresses}">
+        <td th:text="${address.id}">1</td>
+        <td th:text="${address.street}">Улица</td>
+        <td th:text="${address.city}">Город</td>
+        <td th:text="${address.state}">Штат</td>
+        <td th:text="${address.postalCode}">Почтовый Код</td>
+        <td th:text="${address.country}">Страна</td>
+        <td th:text="${address.user != null ? address.user.name : 'Не назначен'}">Пользователь</td>
+        <td>
+            <a th:href="@{/addresses/{id}(id=${address.id})}">Просмотр</a> |
+            <a th:href="@{/addresses/edit/{id}(id=${address.id})}">Редактировать</a> |
+            <a th:href="@{/addresses/delete/{id}(id=${address.id})}"
+               onclick="return confirm('Вы уверены, что хотите удалить этот адрес?');">Удалить</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

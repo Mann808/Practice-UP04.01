@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Заказа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Заказа</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${order.id}">1</span></p>
+    <p><strong>Дата Заказа:</strong> <span th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2024-01-01 12:00</span></p>
+    <p><strong>Пользователь:</strong> <span th:text="${order.user.name}">Пользователь</span></p>
+</div>
+<div>
+    <a th:href="@{/orders/edit/{id}(id=${order.id})}">Редактировать</a> |
+    <a th:href="@{/orders}">Назад к списку</a>
+</div>
+</body>
+</html>

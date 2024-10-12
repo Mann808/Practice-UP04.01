@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Продукты</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Продукты</h1>
+<a th:href="@{/products/new}">Создать Новый Продукт</a>
+<table border="1">
+  <thead>
+  <tr>
+    <th>ID</th>
+    <th>Название</th>
+    <th>Описание</th>
+    <th>Цена</th>
+    <th>Категория</th>
+    <th>Поставщик</th>
+    <th>Действия</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr th:each="product : ${products}">
+    <td th:text="${product.id}">1</td>
+    <td th:text="${product.name}">Название</td>
+    <td th:text="${product.description}">Описание</td>
+    <td th:text="${product.price}">100.00</td>
+    <td th:text="${product.category != null ? product.category.name : 'Не указано'}">Категория</td>
+    <td th:text="${product.supplier != null ? product.supplier.name : 'Не указано'}">Поставщик</td>
+    <td>
+      <a th:href="@{/products/{id}(id=${product.id})}">Просмотр</a> |
+      <a th:href="@{/products/edit/{id}(id=${product.id})}">Редактировать</a> |
+      <a th:href="@{/products/delete/{id}(id=${product.id})}"
+         onclick="return confirm('Вы уверены, что хотите удалить этот продукт?');">Удалить</a>
+    </td>
+  </tr>
+  </tbody>
+</table>
+</body>
+</html>

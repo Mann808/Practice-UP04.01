@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Детали Платежа</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Детали Платежа</h1>
+<div>
+    <p><strong>ID:</strong> <span th:text="${payment.id}">1</span></p>
+    <p><strong>Метод Платежа:</strong> <span th:text="${payment.paymentMethod}">Метод Платежа</span></p>
+    <p><strong>Дата Платежа:</strong> <span th:text="${#temporals.format(payment.paymentDate, 'yyyy-MM-dd HH:mm')}">Дата Платежа</span></p>
+    <p><strong>Сумма:</strong> <span th:text="${payment.amount}">Сумма</span></p>
+    <p><strong>Заказ:</strong> <span th:text="'Заказ #' + ${payment.order.id}">Заказ</span></p>
+</div>
+<div>
+    <a th:href="@{/payments/edit/{id}(id=${payment.id})}">Редактировать</a> |
+    <a th:href="@{/payments}">Назад к списку</a>
+</div>
+</body>
+</html>

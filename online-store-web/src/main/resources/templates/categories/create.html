@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Создать Категорию</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
+<body>
+<h1>Создать Категорию</h1>
+<form th:action="@{/categories}" th:object="${category}" method="post">
+    <div>
+        <label for="name">Название:</label>
+        <input type="text" id="name" th:field="*{name}" />
+        <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="error"></span>
+    </div>
+    <div>
+        <button type="submit">Создать</button>
+        <a th:href="@{/categories}">Отмена</a>
+    </div>
+</form>
+</body>
+</html>
